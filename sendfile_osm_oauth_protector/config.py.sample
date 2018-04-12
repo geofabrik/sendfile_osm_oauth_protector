@@ -1,0 +1,39 @@
+import datetime
+
+
+# flake8: noqa: F841
+class Config:
+    """Configuration
+
+    Attributes:
+        DOCUMENT_ROOT: document root of the web server, used to build absolute paths for the X-Sendfile header
+        CLIENT_KEY: your (application developer) OAuth client key
+        CLIENT_SECRET: your (application developer) OAuth client secret
+        REQUEST_TOKEN_URL: URL to request a temporary token
+        AUTHORIZATION_URL: URL the user should be redirected to in order to authorize your application the
+                           necessary permissions
+        ACCESS_TOKEN_URL: URL to request an access token
+        KEY_DIR: path to a directory where the keys are stored
+        KEY_NAME: default key to use (prefix of the file name)
+
+        COOKIE_NAME: name of the cookie to be used to store access tokens and access token secrets
+        COOKIE_SECURE: set the 'secure' tag for all authentication cookies
+    """
+
+    def __init__(self):
+        # pylint: disable=F841
+        self.DOCUMENT_ROOT = "/var/www/html/"
+        self.AUTH_TIMEOUT = datetime.timedelta(days=2)
+
+        self.REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
+        self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"
+        self.ACCESS_TOKEN_URL = "https://www.openstreetmap.org/oauth/access_token"
+
+        self.CLIENT_KEY = "STUVekasdfghjklqwertzuioyxcvbnm654gh"
+        self.CLIENT_SECRET = "A7650123456789lokimjunhzbgtvfrcdexyX8USHPX"
+
+        self.KEY_DIR = "/srv/osm-internal-auth/keys/"
+        self.KEY_NAME = "test-2018-04-12"
+
+        self.COOKIE_NAME = "myservice_oauth"
+        self.COOKIE_SECURE = True
