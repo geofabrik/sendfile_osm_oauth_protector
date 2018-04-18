@@ -140,10 +140,3 @@ class OAuthDataCookie:
 
     def logout_cookie(self):
         return self._output_cookie(False)
-#        cookie = SimpleCookie()
-#        name = "logout"
-#        cookie[name] = True
-#        cookie[name]["httponly"] = True
-#        if config.COOKIE_SECURE:
-#            cookie[name]["secure"] = True
-#        return cookie[name].OutputString()
