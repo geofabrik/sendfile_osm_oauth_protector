@@ -11,24 +11,21 @@ from sendfile_osm_oauth_protector.key_manager import KeyManager
 
 
 class OAuthDataCookie:
-    def __init__(self, config, environ, key_manager, write_key_name):
+    def __init__(self, config, environ, key_manager):
         """
         Args:
             config (Config): configuration
             environ (Dictionary): contains CGI environment variables (see PEP 0333)
-            read_crypto_box (nacl.public.Box): key pair to decrypt the cookie being sent by the client
-            write_crypto_box (nacl.public.Box): key pair to encrypt the cookie being sent back to the client
-            verify_key (nacl.signing.VerifyKey): key to verify the signature
-            sign_key (nacl.signing.SigningKey): key to sign the cookie data
+            key_manager (KeyManager): key store holding keys for encryption and signatures
         """
         self.config = config
         self.read_cookie(environ)
         self.query_params =  urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.key_manager = key_manager
         self.read_crypto_box = None
-        self.write_crypto_box = self.key_manager.boxes[write_key_name]
+        self.write_crypto_box = self.key_manager.boxes[config.KEY_NAME]
         self.verify_key = None
-        self.sign_key = self.key_manager.signing_keys[write_key_name]
+        self.sign_key = self.key_manager.signing_keys[config.KEY_NAME]
         self.access_token = ""
         self.access_token_secret = ""
         self.valid_until = datetime.datetime.utcnow() - config.AUTH_TIMEOUT

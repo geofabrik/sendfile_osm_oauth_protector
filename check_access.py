@@ -158,7 +158,7 @@ def application(environ, start_response):
     # moment we change our keys.
     # The old key is determined using a property of the cookie sent by the user.
 
-    oauth_cookie = OAuthDataCookie(config, environ, key_manager, config.KEY_NAME)
+    oauth_cookie = OAuthDataCookie(config, environ, key_manager)
     auth_state = oauth_cookie.get_state()
 
     if auth_state == AuthenticationState.LOGGED_IN:
