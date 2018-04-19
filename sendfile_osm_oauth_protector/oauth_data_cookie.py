@@ -6,11 +6,12 @@ import requests
 from requests_oauthlib import OAuth1, OAuth1Session
 import nacl.exceptions
 
+from sendfile_osm_oauth_protector.data_cookie import DataCookie
 from sendfile_osm_oauth_protector.authentication_state import AuthenticationState
 from sendfile_osm_oauth_protector.key_manager import KeyManager
 
 
-class OAuthDataCookie:
+class OAuthDataCookie(DataCookie):
     def __init__(self, config, environ, key_manager=None):
         """
         Args:
@@ -18,7 +19,7 @@ class OAuthDataCookie:
             environ (Dictionary): contains CGI environment variables (see PEP 0333)
             key_manager (KeyManager): key store holding keys for encryption and signatures
         """
-        self.config = config
+        super(OAuthDataCookie, self).__init__(config)
         self.read_cookie(environ)
         self.query_params =  urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.key_manager = key_manager
@@ -144,42 +145,6 @@ class OAuthDataCookie:
         access_tokens_encr = self.write_crypto_box.encrypt(tokens.encode("ascii"), nonce)
         access_tokens_encr_signed = base64.urlsafe_b64encode(self.sign_key.sign(access_tokens_encr)).decode("ascii")
         return self._output_cookie(True, access_tokens_encr_signed)
-
-    def _output_cookie(self, logged_in, encrypted_signed_tokens=None):
-        """
-        Return an instance of http.cookies.SimpleCookie.
-
-        See doc/cookie.md for a description of the contents of the cookie.
-
-        Args:
-            logged_in (boolean): if the user is logged in (successfully
-                                 authenticated)
-            encrypted_signed_tokens (str): encrypted and signed concatenation
-                                           of the access token, access token
-                                           secret and date of the next full
-                                           verification
-
-        Returns:
-            http.cookies.SimpleCookie: the cookie
-        """
-        cookie = SimpleCookie()
-        if logged_in:
-            cookie[self.config.COOKIE_NAME] = "login|{}|{}".format(self.config.KEY_NAME, encrypted_signed_tokens)
-        else:
-            cookie[self.config.COOKIE_NAME] = "logout||"
-        cookie[self.config.COOKIE_NAME]["httponly"] = True
-        if self.config.COOKIE_SECURE:
-            cookie[self.config.COOKIE_NAME]["secure"] = True
-        return cookie[self.config.COOKIE_NAME].OutputString()
-
-    def logout_cookie(self):
-        """
-        Return a cookie for a logged out user.
-
-        Returns:
-            http.cookies.SimpleCookie: the cookie
-        """
-        return self._output_cookie(False)
 
     def read_cookie(self, environ):
         """
