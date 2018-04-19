@@ -17,6 +17,9 @@ The cookies consists of three parts separated by a `|` character.
 
 *encrypted and signed tokens* is a concatenation of the access token, access token secret and the date when the authorization of these tokens has to be rechecked. These tokens are encrypted using the [PyNaCl](https://pynacl.readthedocs.io/en/stable/#) module (`nacl.public` for encryption, `nacl.signing` for the signature).
 
+
+## Structure of the encrypted and signed content of the cookie
+
 If you decrypt the encrypted message, you will get another string consisting of three parts which are separated by `|` characters:
 
 
@@ -33,3 +36,8 @@ If you decrypt the encrypted message, you will get another string consisting of 
 The application will perform a check only in a certain interval. This is a compromise between performance and security. On the one hand, it is possible to use revoked access tokens for a certain time but it will fail when the next check is done. On the other hand, the application can (currently not implemented) suspend the check for a certain time if the OSM API is not accessible (e.g. down or responding with code 500 or similar).
 
 If the such a check is done, valid_until will be set to the date and time when the next check is necessary. This date will be signed (and encrypted) and attackers have to break the digital signature to circumvent a recheck. 
+
+
+## Logout
+
+Users can delete the cookie by calling `/logout` which sets a cookie which has the content `logout||`. Any later requests to any resource other than `/logout` will be redirected to the authorization form of openstreetmap.org.
