@@ -11,7 +11,7 @@ from sendfile_osm_oauth_protector.key_manager import KeyManager
 
 
 class OAuthDataCookie:
-    def __init__(self, config, environ, key_manager):
+    def __init__(self, config, environ, key_manager=None):
         """
         Args:
             config (Config): configuration
@@ -22,10 +22,11 @@ class OAuthDataCookie:
         self.read_cookie(environ)
         self.query_params =  urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.key_manager = key_manager
-        self.read_crypto_box = None
-        self.write_crypto_box = self.key_manager.boxes[config.KEY_NAME]
-        self.verify_key = None
-        self.sign_key = self.key_manager.signing_keys[config.KEY_NAME]
+        if self.key_manager is not None:
+            self.read_crypto_box = None
+            self.write_crypto_box = self.key_manager.boxes[config.KEY_NAME]
+            self.verify_key = None
+            self.sign_key = self.key_manager.signing_keys[config.KEY_NAME]
         self.access_token = ""
         self.access_token_secret = ""
         self.valid_until = datetime.datetime.utcnow() - config.AUTH_TIMEOUT
