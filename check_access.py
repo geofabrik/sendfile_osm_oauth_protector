@@ -18,8 +18,19 @@ config = Config()
 key_manager = KeyManager(config.KEY_DIR)
 
 
-# taken from PEP 0333
 def reconstruct_url(environ, with_query_string=False):
+    """
+    Reconstruct the URL.
+
+    The implementation was taken from PEP 0333
+
+    Args:
+        environ (Dictionary): contains CGI environment variables (see PEP 0333)
+        with_query_string (Boolean): add the query string if any
+
+    Returns:
+        str: the URL
+    """
     url = environ["wsgi.url_scheme"] + "://"
 
     if environ.get("HTTP_HOST"):
@@ -42,6 +53,18 @@ def reconstruct_url(environ, with_query_string=False):
 
 
 def grant_access(oauth_cookie, start_response, path):
+    """
+    Return code 200 and tell Apache to send the file using the X-Sendfile header.
+    This function also sets the authentication cookie.
+
+    Args:
+        oauth_cookie (OAuthDataCookie)
+        start_response: the start_response() callable
+        path (str): the requested path
+
+    Returns:
+        list: a empty list because data is sent by Apache
+    """
     status = "200 OK"
     response_headers = [("X-Sendfile", "{}/{}".format(config.DOCUMENT_ROOT, path)),
                         ("Set-Cookie", oauth_cookie.output())]
@@ -51,6 +74,22 @@ def grant_access(oauth_cookie, start_response, path):
 
 
 def deny_access(oauth_cookie, start_response, message):
+    """
+    Return code 403.
+
+    A message is sent as text/plain. A logout cookie will be
+    set. Any further request by that client will end in the usual
+    authentication and authorisation procedure if the client has a proper
+    cookie handling (is a browser and not curl/wget with default parameters).
+
+    Args:
+        oauth_cookie (OAuthDataCookie)
+        start_response: the start_response() callable
+        path (str): the requested path
+
+    Returns:
+        list: list of bytes (the message)
+    """
     #TODO return rendered HTML page with link to log-in again
     status = "403 Forbidden"
     msg = message.encode("utf8")
@@ -64,12 +103,32 @@ def deny_access(oauth_cookie, start_response, message):
 
 
 def redirect(status, location, start_response):
+    """
+    Return a redirect code. This function does not set any cookie.
+
+    Args:
+        status (str): code and verbal representation (e.g. `302 Found`)
+        location (str): the location the client should be redirected to (a URL)
+        start_response: the start_response() callable
+
+    Returns:
+        list: an empty list
+    """
     response_headers = [("location", location)]
     start_response(status, response_headers)
     return []
 
 
 def read_cookies(environ):
+    """
+    Read cookies from the enviroment variables.
+
+    Args:
+        environ (Dictionary): contains CGI environment variables (see PEP 0333)
+
+    Returns:
+        http.cookies.SimpleCookie: successfully read cookie, None otherwise
+    """
     if "HTTP_COOKIE" not in environ:
         return None
     cookie = SimpleCookie(environ["HTTP_COOKIE"])
@@ -86,7 +145,7 @@ def request_oauth_token(environ, crypto_box):
         crypto_box (nacl.public.Box): encryption used to encrypt oauth_token_secret
 
     Returns:
-        str: authorization_url
+        str: authorization URL
     """
     oauth = OAuth1Session(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
     fetch_response = oauth.fetch_request_token(config.REQUEST_TOKEN_URL)
