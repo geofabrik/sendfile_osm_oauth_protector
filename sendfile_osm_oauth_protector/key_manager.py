@@ -7,12 +7,19 @@ import nacl.signing
 class KeyManager:
     """Manage all keys used to encrypt and sign the cookies."""
 
-    def __init__(self, directory_name):
+    def __init__(self, directory_name=None):
+        """
+        Create a instance of this class
+
+        Args:
+            directory_name (str): directory to load the keys from. No keys will be loaded if this argument is None.
+        """
         self.directory_name = directory_name
-        self.boxes = {}
-        self.signing_keys = {}
-        self.verify_keys = {}
-        self._load_keys()
+        if self.directory_name is not None:
+            self.boxes = {}
+            self.signing_keys = {}
+            self.verify_keys = {}
+            self._load_keys()
 
     def _flush_keys(self, name, encryption_keyfile, signing_keyfile, verify_keyfile):
         if encryption_keyfile is None or signing_keyfile is None or verify_keyfile is None:
