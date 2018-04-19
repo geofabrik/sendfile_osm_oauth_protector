@@ -1,5 +1,6 @@
 import datetime
 import base64
+import urllib.parse
 from http.cookies import SimpleCookie
 import requests
 from requests_oauthlib import OAuth1, OAuth1Session
@@ -10,20 +11,19 @@ from sendfile_osm_oauth_protector.key_manager import KeyManager
 
 
 class OAuthDataCookie:
-    def __init__(self, config, cookie, query_params, key_manager, write_key_name):
+    def __init__(self, config, environ, key_manager, write_key_name):
         """
         Args:
             config (Config): configuration
-            cookie (cookies.SimpleCookie): cookie sent by the client
-            query_params (dict): dictionary of the parameters of the HTTP query string
+            environ (Dictionary): contains CGI environment variables (see PEP 0333)
             read_crypto_box (nacl.public.Box): key pair to decrypt the cookie being sent by the client
             write_crypto_box (nacl.public.Box): key pair to encrypt the cookie being sent back to the client
             verify_key (nacl.signing.VerifyKey): key to verify the signature
             sign_key (nacl.signing.SigningKey): key to sign the cookie data
         """
         self.config = config
-        self.cookie = cookie
-        self.query_params = query_params
+        self.read_cookie(environ)
+        self.query_params =  urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.key_manager = key_manager
         self.read_crypto_box = None
         self.write_crypto_box = self.key_manager.boxes[write_key_name]
@@ -182,3 +182,19 @@ class OAuthDataCookie:
             http.cookies.SimpleCookie: the cookie
         """
         return self._output_cookie(False)
+
+    def read_cookie(self, environ):
+        """
+        Read cookies from the enviroment variables.
+
+        Args:
+            environ (Dictionary): contains CGI environment variables (see PEP 0333)
+
+        Returns:
+            http.cookies.SimpleCookie: successfully read cookie, None otherwise
+        """
+        self.cookie = None
+        if "HTTP_COOKIE" in environ:
+            cookie = SimpleCookie(environ["HTTP_COOKIE"])
+            if self.config.COOKIE_NAME in cookie:
+                self.cookie = cookie

@@ -119,23 +119,6 @@ def redirect(status, location, start_response):
     return []
 
 
-def read_cookies(environ):
-    """
-    Read cookies from the enviroment variables.
-
-    Args:
-        environ (Dictionary): contains CGI environment variables (see PEP 0333)
-
-    Returns:
-        http.cookies.SimpleCookie: successfully read cookie, None otherwise
-    """
-    if "HTTP_COOKIE" not in environ:
-        return None
-    cookie = SimpleCookie(environ["HTTP_COOKIE"])
-    if config.COOKIE_NAME not in cookie:
-        return None
-    return cookie
-
 
 def request_oauth_token(environ, crypto_box):
     """
@@ -167,9 +150,7 @@ def request_oauth_token(environ, crypto_box):
 
 
 def application(environ, start_response):
-    query_params = urllib.parse.parse_qs(environ["QUERY_STRING"])
     path_info = environ["PATH_INFO"]
-    cookie = read_cookies(environ)
 
     # We have to key pairs for encryption because we want to be able to decrypt cookies using
     # the old key pair but use the new key pair for any cookies we sent back to the client.
@@ -177,7 +158,7 @@ def application(environ, start_response):
     # moment we change our keys.
     # The old key is determined using a property of the cookie sent by the user.
 
-    oauth_cookie = OAuthDataCookie(config, cookie, query_params, key_manager, config.KEY_NAME)
+    oauth_cookie = OAuthDataCookie(config, environ, key_manager, config.KEY_NAME)
     auth_state = oauth_cookie.get_state()
 
     if auth_state == AuthenticationState.LOGGED_IN:
