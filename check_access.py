@@ -12,6 +12,7 @@ from sendfile_osm_oauth_protector.oauth_data_cookie import OAuthDataCookie
 from sendfile_osm_oauth_protector.authentication_state import AuthenticationState
 from sendfile_osm_oauth_protector.config import Config
 from sendfile_osm_oauth_protector.key_manager import KeyManager
+from sendfile_osm_oauth_protector.oauth_error import OAuthError
 
 
 config = Config()
@@ -102,6 +103,14 @@ def deny_access(oauth_cookie, start_response, message):
     return [msg]
 
 
+def respond_error(error_message, start_response, path_info, error_code):
+    msg = error_message.encode("utf8")
+    response_headers = [("Content-type", "text/plain; charset=utf-8"),
+                        ("Content-Length", str(len(msg)))]
+    start_response(error_code, response_headers)
+    return [msg]
+
+
 def redirect(status, location, start_response):
     """
     Return a redirect code. This function does not set any cookie.
@@ -119,7 +128,6 @@ def redirect(status, location, start_response):
     return []
 
 
-
 def request_oauth_token(environ, crypto_box):
     """
     Get a request_token from the OSM API and prepare the authroization URL the use should be redirected to.
@@ -129,10 +137,18 @@ def request_oauth_token(environ, crypto_box):
 
     Returns:
         str: authorization URL
+
+    Raises:
+        OAuthError: error sending a request to the OSM API or failed to parse its response
     """
     oauth = OAuth1Session(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
-    fetch_response = oauth.fetch_request_token(config.REQUEST_TOKEN_URL)
+
+    try:
+        fetch_response = oauth.fetch_request_token(config.REQUEST_TOKEN_URL)
+    except ValueError as err:
+        raise OAuthError(err.message, "500 Internal Server Error")
     resource_owner_secret = fetch_response.get('oauth_token_secret')
+
     # encrypt secret
     nonce = nacl.utils.random(nacl.public.Box.NONCE_SIZE)
     oauth_token_secret_encr = base64.urlsafe_b64encode(crypto_box.encrypt(resource_owner_secret.encode("utf8"), nonce)).decode("ascii")
@@ -163,9 +179,12 @@ def application(environ, start_response):
 
     if auth_state == AuthenticationState.LOGGED_IN:
         # second visit
-        oauth_cookie.get_access_token_from_api()
-        if oauth_cookie.check_with_osm_api():
-            return grant_access(oauth_cookie, start_response, path_info)
+        try:
+            oauth_cookie.get_access_token_from_api()
+            if oauth_cookie.check_with_osm_api():
+                return grant_access(oauth_cookie, start_response, path_info)
+        except OAuthError as err:
+            return respond_error(err.error_message, start_response, path_info, err.message)
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_VALID:
         return grant_access(oauth_cookie, start_response, path_info)

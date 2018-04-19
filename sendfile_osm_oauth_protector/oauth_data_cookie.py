@@ -9,6 +9,8 @@ import nacl.exceptions
 from sendfile_osm_oauth_protector.data_cookie import DataCookie
 from sendfile_osm_oauth_protector.authentication_state import AuthenticationState
 from sendfile_osm_oauth_protector.key_manager import KeyManager
+from sendfile_osm_oauth_protector.oauth_error import OAuthError
+from sendfile_osm_oauth_protector.internal_error import InternalError
 
 
 class OAuthDataCookie(DataCookie):
@@ -21,13 +23,16 @@ class OAuthDataCookie(DataCookie):
         """
         super(OAuthDataCookie, self).__init__(config)
         self.read_cookie(environ)
-        self.query_params =  urllib.parse.parse_qs(environ["QUERY_STRING"])
+        self.query_params = urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.key_manager = key_manager
         if self.key_manager is not None:
-            self.read_crypto_box = None
-            self.write_crypto_box = self.key_manager.boxes[config.KEY_NAME]
-            self.verify_key = None
-            self.sign_key = self.key_manager.signing_keys[config.KEY_NAME]
+            try:
+                self.read_crypto_box = None
+                self.write_crypto_box = self.key_manager.boxes[config.KEY_NAME]
+                self.verify_key = None
+                self.sign_key = self.key_manager.signing_keys[config.KEY_NAME]
+            except KeyError as err:
+                raise InternalError("key not found") from err
         self.access_token = ""
         self.access_token_secret = ""
         self.valid_until = datetime.datetime.utcnow() - config.AUTH_TIMEOUT
@@ -48,16 +53,30 @@ class OAuthDataCookie(DataCookie):
         using a temporary oauth_token and oauth_token_secret.
 
         The resulting tokens will be saved as properties of this class.
+
+        Raises:
+            OAuthError: if any OAuth related exception occured
         """
-        oauth_token = self.query_params["oauth_token"][0]
-        oauth_token_secret_encr = self.query_params["oauth_token_secret_encr"][0]
-        oauth_token_secret = self.write_crypto_box.decrypt(base64.urlsafe_b64decode(oauth_token_secret_encr))
-        oauth = OAuth1Session(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=oauth_token,
-                              resource_owner_secret=oauth_token_secret)
-        #TODO catch exceptions (network)
-        oauth_tokens = oauth.fetch_access_token(self.config.ACCESS_TOKEN_URL)
-        self.access_token = oauth_tokens.get("oauth_token")
-        self.access_token_secret = oauth_tokens.get("oauth_token_secret")
+        try:
+            oauth_token = self.query_params["oauth_token"][0]
+            oauth_token_secret_encr = self.query_params["oauth_token_secret_encr"][0]
+        except KeyError as err:
+            raise OAuthError("oauth_token or oauth_token_secret_encr is missing.", "400 Bad Request") from err
+        try:
+            oauth_token_secret = self.write_crypto_box.decrypt(base64.urlsafe_b64decode(oauth_token_secret_encr))
+        except Exception as err:
+            raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
+        try:
+            oauth = OAuth1Session(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=oauth_token,
+                                  resource_owner_secret=oauth_token_secret)
+            oauth_tokens = oauth.fetch_access_token(self.config.ACCESS_TOKEN_URL)
+        except ValueError as err:
+            raise OAuthError(str(err), "500 Internal Server Error") from err
+        try:
+            self.access_token = oauth_tokens.get("oauth_token")
+            self.access_token_secret = oauth_tokens.get("oauth_token_secret")
+        except KeyError as err:
+            raise OAuthError("Incomplete response of OSM API, oauth_token or oauth_token_secret is missing.", "502 Bad Gateway") from err
 
     def get_state(self):
         """
@@ -73,17 +92,11 @@ class OAuthDataCookie(DataCookie):
             return AuthenticationState.NONE
         try:
             contents = self.cookie[self.config.COOKIE_NAME].value.split("|")
-        except KeyError:
-            return AuthenticationState.NONE
-        if len(contents) < 3 or contents[0] == "logout" or contents[0] != "login":
-            return AuthenticationState.NONE
-        try:
+            if len(contents) < 3 or contents[0] == "logout" or contents[0] != "login":
+                return AuthenticationState.NONE
             key_name = contents[1]
             self._load_read_keys(key_name)
-        except KeyError:
-            return AuthenticationState.NONE
-        signed = contents[2].encode("ascii")
-        try:
+            signed = contents[2].encode("ascii")
             access_tokens_encr = self.verify_key.verify(base64.urlsafe_b64decode(signed))
         except nacl.exceptions.BadSignatureError:
             return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
@@ -94,8 +107,8 @@ class OAuthDataCookie(DataCookie):
             self.access_token = parts[0]
             self.access_token_secret = parts[1]
             self.valid_until = datetime.datetime.strptime(parts[2], "%Y-%m-%dT%H:%M:%S")
-        except:
-            return AuthenticationState.OAUTH_TOKEN_DECRYPTION_FAILED
+        except Exception as err:
+            raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
         if datetime.datetime.utcnow() > self.valid_until:
             return AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK
         return AuthenticationState.OAUTH_ACCESS_TOKEN_VALID
@@ -107,6 +120,9 @@ class OAuthDataCookie(DataCookie):
 
         Returns:
             boolean: result of _check_with_osm_api()
+
+        Raises:
+            OAuthError: as raised by _check_with_osm_api()
         """
         if not self._check_with_osm_api():
             return False
@@ -120,12 +136,20 @@ class OAuthDataCookie(DataCookie):
         Returns:
             boolean: True if the source could be request, False if the request
                      failed (repsonse code other than 200)
+
+        Raises:
+            OAuthError: failed to get a connection to the OSM API or the API responded with code 500
         """
         oauth = OAuth1(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=self.access_token,
                        resource_owner_secret=self.access_token_secret)
-        r = requests.get(url="https://api.openstreetmap.org/api/0.6/user/details", auth=oauth)
+        try:
+            r = requests.get(url="https://api.openstreetmap.org/api/0.6/user/details", auth=oauth)
+        except ConnectionError as err:
+            raise OAuthError("failed to (re)check the authorization", "502 Bad Gateway") from err
         if r.status_code == 200:
             return True
+        if r.status_code == 500:
+            raise OAuthError("received error 500 when (re)checking the authorization", "502 Bad Gateway")
         return False
 
     def output(self):
