@@ -169,19 +169,3 @@ class OAuthDataCookie(DataCookie):
         access_tokens_encr = self.write_crypto_box.encrypt(tokens.encode("ascii"), nonce)
         access_tokens_encr_signed = base64.urlsafe_b64encode(self.sign_key.sign(access_tokens_encr)).decode("ascii")
         return self._output_cookie(True, access_tokens_encr_signed)
-
-    def read_cookie(self, environ):
-        """
-        Read cookies from the enviroment variables.
-
-        Args:
-            environ (Dictionary): contains CGI environment variables (see PEP 0333)
-
-        Returns:
-            http.cookies.SimpleCookie: successfully read cookie, None otherwise
-        """
-        self.cookie = None
-        if "HTTP_COOKIE" in environ:
-            cookie = SimpleCookie(environ["HTTP_COOKIE"])
-            if self.config.COOKIE_NAME in cookie:
-                self.cookie = cookie

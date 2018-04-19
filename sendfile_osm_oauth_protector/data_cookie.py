@@ -44,3 +44,19 @@ class DataCookie:
             http.cookies.SimpleCookie: the cookie
         """
         return self._output_cookie(False)
+
+    def read_cookie(self, environ):
+        """
+        Read cookies from the enviroment variables.
+
+        Args:
+            environ (Dictionary): contains CGI environment variables (see PEP 0333)
+
+        Returns:
+            http.cookies.SimpleCookie: successfully read cookie, None otherwise
+        """
+        self.cookie = None
+        if "HTTP_COOKIE" in environ:
+            cookie = SimpleCookie(environ["HTTP_COOKIE"])
+            if self.config.COOKIE_NAME in cookie:
+                self.cookie = cookie
