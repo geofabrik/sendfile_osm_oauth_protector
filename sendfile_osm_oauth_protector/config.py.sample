@@ -9,6 +9,9 @@ class Config:
         DOCUMENT_ROOT: document root of the web server, used to build absolute paths for the X-Sendfile header
         AUTH_TIMEOUT (int): interval when the next check of the access tokens is necessary.
         RECHECK (bool): enable/disable the recheck of the authorization by only requesting a protected resource using an old access token
+        TEMPLATES_PATH (str): search path for templates
+        LANDING_PAGE_TMPL (str): file name of the template for the landing page
+        LANDING_PAGE_URL_PARAM (str): URL parameter to indicate that the user comes from the landing page
         CLIENT_KEY: your (application developer) OAuth client key
         CLIENT_SECRET: your (application developer) OAuth client secret
         REQUEST_TOKEN_URL: URL to request a temporary token
@@ -28,6 +31,10 @@ class Config:
         self.DOCUMENT_ROOT = "/var/www/html/"
         self.AUTH_TIMEOUT = 48
         self.RECHECK = False
+
+        self.TEMPLATES_PATH = "/home/michael/git/git.geofabrik.de/osm-internal-auth/templates/"
+        self.LANDING_PAGE_TMPL = "landing_page.tmpl"
+        self.LANDING_PAGE_URL_PARAM = "landing_page"
 
         self.REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
         self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"

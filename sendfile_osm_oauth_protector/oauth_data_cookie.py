@@ -88,8 +88,11 @@ class OAuthDataCookie(DataCookie):
         ITERATION2_KEYS = {"oauth_token", "oauth_token_secret_encr"}
         if (ITERATION2_KEYS & set(iter(self.query_params))) == set(ITERATION2_KEYS):
             return AuthenticationState.LOGGED_IN
-        if self.cookie is None:
+        landing_page = self.query_params.get(self.config.LANDING_PAGE_URL_PARAM, ["false"])
+        if self.cookie is None and landing_page[0] == "true":
             return AuthenticationState.NONE
+        elif self.cookie is None:
+            return AuthenticationState.SHOW_LANDING_PAGE
         try:
             contents = self.cookie[self.config.COOKIE_NAME].value.split("|")
             if len(contents) < 3 or contents[0] == "logout" or contents[0] != "login":
@@ -101,6 +104,8 @@ class OAuthDataCookie(DataCookie):
         except nacl.exceptions.BadSignatureError:
             return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
         except KeyError:
+            # if something fails here, they normal authentication-authorization loop should start and
+            # users not treated like not having seen the landing page
             return AuthenticationState.NONE
         try:
             parts = self.read_crypto_box.decrypt(access_tokens_encr).decode("ascii").split("|")
@@ -126,7 +131,7 @@ class OAuthDataCookie(DataCookie):
         """
         if not self._check_with_osm_api():
             return False
-        self.valid_until = datetime.datetime.utcnow() + self.config.AUTH_TIMEOUT
+        self.valid_until = datetime.datetime.utcnow() + datetime.timedelta(hours=self.config.AUTH_TIMEOUT)
         return True
 
     def _check_with_osm_api(self):

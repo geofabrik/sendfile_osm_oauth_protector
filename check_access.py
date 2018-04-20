@@ -7,6 +7,7 @@ import base64
 import nacl.public
 import nacl.utils
 from http.cookies import SimpleCookie
+import jinja2
 
 from sendfile_osm_oauth_protector.oauth_data_cookie import OAuthDataCookie
 from sendfile_osm_oauth_protector.authentication_state import AuthenticationState
@@ -17,9 +18,14 @@ from sendfile_osm_oauth_protector.oauth_error import OAuthError
 
 config = Config()
 key_manager = KeyManager(config.KEY_DIR)
+jinja2_version = jinja2.__version__.split(".")
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=config.TEMPLATES_PATH),
+                         trim_blocks=True,
+                         autoescape=True
+                         )
 
 
-def reconstruct_url(environ, with_query_string=False):
+def reconstruct_url(environ, with_query_string=False, append_to_query_string=None, skip_key=None):
     """
     Reconstruct the URL.
 
@@ -28,6 +34,8 @@ def reconstruct_url(environ, with_query_string=False):
     Args:
         environ (Dictionary): contains CGI environment variables (see PEP 0333)
         with_query_string (Boolean): add the query string if any
+        append_to_query_string (str): append this ESCAPED string to the query string. No leading `&` character required.
+        skip_keys (str): keys of the old query string which should not be appended to the query string
 
     Returns:
         str: the URL
@@ -49,7 +57,18 @@ def reconstruct_url(environ, with_query_string=False):
     url += urllib.parse.quote(environ.get("SCRIPT_NAME", ""))
     url += urllib.parse.quote(environ.get("PATH_INFO", ""))
     if with_query_string and environ.get('QUERY_STRING'):
-        url += '?' + environ['QUERY_STRING']
+        qs = environ['QUERY_STRING'].split("&")
+        # remove skip_key and its value from query_string
+        if skip_key is not None:
+            for p in qs:
+                if p.startswith("{}=".format(skip_key)):
+                    qs.remove(p)
+        if append_to_query_string is not None:
+            qs.append(append_to_query_string)
+        url += '?' + "&".join(qs)
+    else:
+        if append_to_query_string is not None:
+            url += '?' + append_to_query_string
     return url
 
 
@@ -72,6 +91,16 @@ def grant_access(oauth_cookie, start_response, path):
     #TODO set Content-type
     start_response(status, response_headers)
     return []
+
+def show_landing_page(environ, start_response):
+    template = env.get_template(config.LANDING_PAGE_TMPL)
+    url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
+    site = template.render(link_url=url)
+    status = "200 OK"
+    response_headers = [("Content-type", "text/html"),
+                        ("Content-length", str(len(site)))]
+    start_response(status, response_headers)
+    return [site.encode("utf8")]
 
 
 def deny_access(oauth_cookie, start_response, message):
@@ -154,13 +183,9 @@ def request_oauth_token(environ, crypto_box):
     oauth_token_secret_encr = base64.urlsafe_b64encode(crypto_box.encrypt(resource_owner_secret.encode("utf8"), nonce)).decode("ascii")
 
     authorization_url = oauth.authorization_url(config.AUTHORIZATION_URL)
-    # append callback URL (our callback URL is dynamic)
-    callback_url = urllib.parse.quote(reconstruct_url(environ))
-    if environ.get("QUERY_STRING"):
-        callback_url += urllib.parse.quote("?{}".format(environ["QUERY_STRING"]))
-        callback_url += urllib.parse.quote("&oauth_token_secret_encr={}".format(oauth_token_secret_encr))
-    else:
-        callback_url += urllib.parse.quote("?oauth_token_secret_encr={}".format(oauth_token_secret_encr))
+    # append callback URL because our callback URL is dynamic and cannot be configured in the consumer settings of osm.org
+    query_str_appendix = "oauth_token_secret_encr={}".format(urllib.parse.quote(oauth_token_secret_encr))
+    callback_url = urllib.parse.quote(reconstruct_url(environ, True, query_str_appendix, config.LANDING_PAGE_URL_PARAM))
     authorization_url += "&oauth_callback={}".format(callback_url)
     return authorization_url
 
@@ -186,6 +211,8 @@ def application(environ, start_response):
         except OAuthError as err:
             return respond_error(err.error_message, start_response, path_info, err.message)
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
+    elif auth_state == AuthenticationState.SHOW_LANDING_PAGE:
+        return show_landing_page(environ, start_response)
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_VALID:
         return grant_access(oauth_cookie, start_response, path_info)
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK and config.RECHECK:
