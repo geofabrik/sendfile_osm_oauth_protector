@@ -35,7 +35,7 @@ class OAuthDataCookie(DataCookie):
                 raise InternalError("key not found") from err
         self.access_token = ""
         self.access_token_secret = ""
-        self.valid_until = datetime.datetime.utcnow() - config.AUTH_TIMEOUT
+        self.valid_until = datetime.datetime.utcnow() - datetime.timedelta(hours=config.AUTH_TIMEOUT)
 
     def _load_read_keys(self, key_name):
         """

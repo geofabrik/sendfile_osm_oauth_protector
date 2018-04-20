@@ -188,7 +188,7 @@ def application(environ, start_response):
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_VALID:
         return grant_access(oauth_cookie, start_response, path_info)
-    elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK:
+    elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK and config.RECHECK:
         if oauth_cookie.check_with_osm_api():
             return grant_access(oauth_cookie, start_response, path_info)
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are still entitled to download the requested resource.")
