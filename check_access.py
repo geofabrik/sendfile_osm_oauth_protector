@@ -132,11 +132,11 @@ def deny_access(oauth_cookie, start_response, message):
     return [msg]
 
 
-def respond_error(error_message, start_response, path_info, error_code):
-    msg = error_message.encode("utf8")
+def respond_error(http_error_message, start_response, path_info, exception_message):
+    msg = exception_message.encode("utf8")
     response_headers = [("Content-type", "text/plain; charset=utf-8"),
                         ("Content-Length", str(len(msg)))]
-    start_response(error_code, response_headers)
+    start_response(http_error_message, response_headers)
     return [msg]
 
 
@@ -209,7 +209,7 @@ def application(environ, start_response):
             if oauth_cookie.check_with_osm_api():
                 return grant_access(oauth_cookie, start_response, path_info)
         except OAuthError as err:
-            return respond_error(err.error_message, start_response, path_info, err.message)
+            return respond_error(err.error_message, start_response, path_info, str(err))
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
     elif auth_state == AuthenticationState.SHOW_LANDING_PAGE:
         return show_landing_page(environ, start_response)
