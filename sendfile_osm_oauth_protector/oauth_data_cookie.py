@@ -86,8 +86,10 @@ class OAuthDataCookie(DataCookie):
             AuthenticationState
         """
         ITERATION2_KEYS = {"oauth_token", "oauth_token_secret_encr"}
+        is_redirected_from_osm = False
         if (ITERATION2_KEYS & set(iter(self.query_params))) == set(ITERATION2_KEYS):
-            return AuthenticationState.LOGGED_IN
+            #return AuthenticationState.LOGGED_IN
+            is_redirected_from_osm = True
         landing_page = self.query_params.get(self.config.LANDING_PAGE_URL_PARAM, ["false"])
         if self.cookie is None and landing_page[0] == "true":
             return AuthenticationState.NONE
@@ -96,6 +98,8 @@ class OAuthDataCookie(DataCookie):
         try:
             contents = self.cookie[self.config.COOKIE_NAME].value.split("|")
             if len(contents) < 3 or contents[0] == "logout" or contents[0] != "login":
+                if is_redirected_from_osm:
+                    return AuthenticationState.LOGGED_IN
                 return AuthenticationState.NONE
             key_name = contents[1]
             self._load_read_keys(key_name)
