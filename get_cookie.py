@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-import sys
-
 import urllib.parse
 import base64
 import json
@@ -12,6 +10,7 @@ from requests_oauthlib import OAuth1
 from sendfile_osm_oauth_protector.config import Config
 from sendfile_osm_oauth_protector.key_manager import KeyManager
 from sendfile_osm_oauth_protector.oauth_data_cookie import OAuthDataCookie
+from sendfile_osm_oauth_protector.oauth_error import OAuthError
 
 config = Config()
 key_manager = KeyManager(config.KEY_DIR)
@@ -28,7 +27,7 @@ def respond_error(http_error_message, start_response, message):
 def get_request_token(environ, start_response):
     oauth = OAuth1(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
     try:
-        r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth)
+        r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth, timeout=15)
     except requests.exceptions.RequestException as err:
         respond_error("502 Bad Gateway", start_response, str(err))
     parts = urllib.parse.parse_qs(r.text)
@@ -60,9 +59,12 @@ def get_access_token(environ, start_response):
 
     new_environ = {"QUERY_STRING": request_body}
     oauth_data_cookie = OAuthDataCookie(config, new_environ, key_manager)
-    oauth_data_cookie.get_access_token_from_api()
-    if not oauth_data_cookie.check_with_osm_api():
-        return respond_error("502 Bad Gateway", start_response, "Failed to verify if you are allowed to access the protected resources")
+    try:
+        oauth_data_cookie.get_access_token_from_api()
+        if not oauth_data_cookie.check_with_osm_api():
+            return respond_error("502 Bad Gateway", start_response, "Failed to verify if you are allowed to access the protected resources")
+    except OAuthError as err:
+        respond_error("500 Internal Server Error", start_response, str(err))
     cookie = oauth_data_cookie.output().encode("ascii")
 
     response_headers = [("Content-type", "text/plain; charset=ascii"),
