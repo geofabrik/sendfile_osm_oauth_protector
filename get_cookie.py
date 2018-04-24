@@ -27,7 +27,10 @@ def respond_error(http_error_message, start_response, message):
 
 def get_request_token(environ, start_response):
     oauth = OAuth1(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
-    r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth)
+    try:
+        r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth)
+    except requests.exceptions.RequestException as err:
+        respond_error("502 Bad Gateway", start_response, str(err))
     parts = urllib.parse.parse_qs(r.text)
 
     crypto_box = key_manager.boxes[config.KEY_NAME]
