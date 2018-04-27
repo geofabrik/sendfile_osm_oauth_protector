@@ -1,11 +1,13 @@
 #! /usr/bin/env python3
 
+import os.path
 import urllib.parse
 from requests_oauthlib import OAuth1Session
 import nacl.utils
 import base64
 import nacl.public
 import nacl.utils
+import xdg.Mime
 from http.cookies import SimpleCookie
 import jinja2
 
@@ -72,6 +74,25 @@ def reconstruct_url(environ, with_query_string=False, append_to_query_string=Non
     return url
 
 
+def look_for_index_file(search_directory):
+    """
+    Look for a file like index.html located in a directory.
+
+    Args:
+        search_directory: directory where to search
+
+    Returns:
+        str: absolute path to the file if any was found and search_directory otherwise
+
+    Raises:
+    """
+    for filename in config.INDEX_PAGES:
+        filepath = os.path.join(search_directory, filename)
+        if os.path.isfile(filepath):
+            return filepath
+    return search_directory
+
+
 def grant_access(oauth_cookie, start_response, path):
     """
     Return code 200 and tell Apache to send the file using the X-Sendfile header.
@@ -86,9 +107,24 @@ def grant_access(oauth_cookie, start_response, path):
         list: a empty list because data is sent by Apache
     """
     status = "200 OK"
-    response_headers = [("X-Sendfile", "{}/{}".format(config.DOCUMENT_ROOT, path)),
-                        ("Set-Cookie", oauth_cookie.output())]
-    #TODO set Content-type
+    # if path is empty (i.e. directory requested), return index.html or whatever is defined in
+    # config.INDEX_PAGES
+    response_headers = [("Set-Cookie", oauth_cookie.output())]
+    if path.endswith("/"):
+        try:
+            path = look_for_index_file("{}/{}".format(config.DOCUMENT_ROOT, path))
+        except:
+            return respond_error("404 Not Found", start_response,
+                                 "The requested resource could not be found or is not accessible.")
+        if path.endswith("/"):
+            return respond_error("404 Not Found", start_response,
+                                 "The requested resource could not be found or is not accessible.")
+        response_headers.append(("X-Sendfile", new_path))
+    else:
+        response_headers.append(("X-Sendfile", "{}/{}".format(config.DOCUMENT_ROOT, path)))
+    # set Content-type
+    mime_type = str(xdg.Mime.get_type(path))
+    response_headers.append(("Content-type", mime_type))
     start_response(status, response_headers)
     return []
 
@@ -132,7 +168,7 @@ def deny_access(oauth_cookie, start_response, message):
     return [msg]
 
 
-def respond_error(http_error_message, start_response, path_info, exception_message):
+def respond_error(http_error_message, start_response, exception_message):
     msg = exception_message.encode("utf8")
     response_headers = [("Content-type", "text/plain; charset=utf-8"),
                         ("Content-Length", str(len(msg)))]
@@ -209,7 +245,7 @@ def application(environ, start_response):
             if oauth_cookie.check_with_osm_api():
                 return grant_access(oauth_cookie, start_response, path_info)
         except OAuthError as err:
-            return respond_error(err.error_message, start_response, path_info, str(err))
+            return respond_error(err.error_message, start_response, str(err))
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
     elif auth_state == AuthenticationState.SHOW_LANDING_PAGE:
         return show_landing_page(environ, start_response)
