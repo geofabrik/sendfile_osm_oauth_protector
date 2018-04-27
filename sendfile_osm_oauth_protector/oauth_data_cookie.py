@@ -93,11 +93,13 @@ class OAuthDataCookie(DataCookie):
         landing_page = self.query_params.get(self.config.LANDING_PAGE_URL_PARAM, ["false"])
         if self.cookie is None and landing_page[0] == "true":
             return AuthenticationState.NONE
+        elif self.cookie is None and is_redirected_from_osm:
+            return AuthenticationState.LOGGED_IN
         elif self.cookie is None:
             return AuthenticationState.SHOW_LANDING_PAGE
         try:
             contents = self.cookie[self.config.COOKIE_NAME].value.split("|")
-            if len(contents) < 3 or contents[0] == "logout" or contents[0] != "login":
+            if len(contents) < 3 or contents[0] != "login":
                 if is_redirected_from_osm:
                     return AuthenticationState.LOGGED_IN
                 return AuthenticationState.NONE
