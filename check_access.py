@@ -131,12 +131,12 @@ def grant_access(oauth_cookie, start_response, path):
 def show_landing_page(environ, start_response):
     template = env.get_template(config.LANDING_PAGE_TMPL)
     url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
-    site = template.render(link_url=url)
+    site = template.render(link_url=url).encode("utf-8")
     status = "200 OK"
     response_headers = [("Content-type", "text/html"),
                         ("Content-length", str(len(site)))]
     start_response(status, response_headers)
-    return [site.encode("utf8")]
+    return [site]
 
 
 def deny_access(oauth_cookie, start_response, message):
