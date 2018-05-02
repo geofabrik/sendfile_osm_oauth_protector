@@ -119,7 +119,7 @@ def grant_access(oauth_cookie, start_response, path):
         if path.endswith("/"):
             return respond_error("404 Not Found", start_response,
                                  "The requested resource could not be found or is not accessible.")
-        response_headers.append(("X-Sendfile", new_path))
+        response_headers.append(("X-Sendfile", path))
     else:
         response_headers.append(("X-Sendfile", "{}/{}".format(config.DOCUMENT_ROOT, path)))
     # set Content-type
