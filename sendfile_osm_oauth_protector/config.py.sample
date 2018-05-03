@@ -13,6 +13,7 @@ class Config:
         TEMPLATES_PATH (str): search path for templates
         LANDING_PAGE_TMPL (str): file name of the template for the landing page
         LANDING_PAGE_URL_PARAM (str): URL parameter to indicate that the user comes from the landing page
+        PUBLIC_HOST (str): hostname of the public alternative which offers the same but without sensitive data
         CLIENT_KEY: your (application developer) OAuth client key
         CLIENT_SECRET: your (application developer) OAuth client secret
         REQUEST_TOKEN_URL: URL to request a temporary token
@@ -37,6 +38,7 @@ class Config:
         self.TEMPLATES_PATH = "/home/michael/git/git.geofabrik.de/osm-internal-auth/templates/"
         self.LANDING_PAGE_TMPL = "landing_page.tmpl"
         self.LANDING_PAGE_URL_PARAM = "landing_page"
+        self.PUBLIC_HOST = "download.geofabrik.de"
 
         self.REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
         self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"
