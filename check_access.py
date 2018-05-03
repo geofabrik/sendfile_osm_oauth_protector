@@ -16,6 +16,7 @@ from sendfile_osm_oauth_protector.authentication_state import AuthenticationStat
 from sendfile_osm_oauth_protector.config import Config
 from sendfile_osm_oauth_protector.key_manager import KeyManager
 from sendfile_osm_oauth_protector.oauth_error import OAuthError
+from sendfile_osm_oauth_protector.internal_error import InternalError
 
 
 config = Config()
@@ -250,7 +251,10 @@ def application(environ, start_response):
     # moment we change our keys.
     # The old key is determined using a property of the cookie sent by the user.
 
-    oauth_cookie = OAuthDataCookie(config, environ, key_manager)
+    try:
+        oauth_cookie = OAuthDataCookie(config, environ, key_manager)
+    except InternalError:
+        return respond_error("400 Bad Request", start_response, "Cookie verification failed. Your cookie was signed using a key which is not available on the server.")
     auth_state = oauth_cookie.get_state()
 
     if auth_state == AuthenticationState.LOGGED_IN:
