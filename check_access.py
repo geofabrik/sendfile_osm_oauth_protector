@@ -110,25 +110,38 @@ def grant_access(oauth_cookie, start_response, path):
     # if path is empty (i.e. directory requested), return index.html or whatever is defined in
     # config.INDEX_PAGES
     response_headers = [("Set-Cookie", oauth_cookie.output())]
-    if path.endswith("/"):
+    path = "{}/{}".format(config.DOCUMENT_ROOT, path)
+    if os.path.isdir(path):
         try:
-            path = look_for_index_file("{}/{}".format(config.DOCUMENT_ROOT, path))
+            path = look_for_index_file(path)
         except:
             return respond_error("404 Not Found", start_response,
-                                 "The requested resource could not be found or is not accessible.")
-        if path.endswith("/"):
-            return respond_error("404 Not Found", start_response,
-                                 "The requested resource could not be found or is not accessible.")
-        response_headers.append(("X-Sendfile", path))
-    else:
-        response_headers.append(("X-Sendfile", "{}/{}".format(config.DOCUMENT_ROOT, path)))
+                                 "The requested resource could not be found or is not accessible.",
+                                 response_headers)
+    if not os.path.isfile(path):
+        return respond_error("404 Not Found", start_response,
+                             "The requested resouce could not be found or is not accessible.",
+                             response_headers)
+    response_headers.append(("X-Sendfile", path))
     # set Content-type
     mime_type = str(xdg.Mime.get_type(path))
     response_headers.append(("Content-type", mime_type))
     start_response(status, response_headers)
     return []
 
-def show_landing_page(environ, start_response):
+def show_landing_page(environ, start_response, path):
+    path = "{}/{}".format(config.DOCUMENT_ROOT, path)
+    if os.path.isdir(path):
+        try:
+            path = look_for_index_file(path)
+        except:
+            return respond_error("404 Not Found", start_response,
+                                 "The requested resource could not be found or is not accessible."
+                                 )
+    if not os.path.isfile(path):
+        return respond_error("404 Not Found", start_response,
+                             "The requested resouce could not be found or is not accessible."
+                             )
     template = env.get_template(config.LANDING_PAGE_TMPL)
     url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
     site = template.render(link_url=url).encode("utf-8")
@@ -168,10 +181,11 @@ def deny_access(oauth_cookie, start_response, message):
     return [msg]
 
 
-def respond_error(http_error_message, start_response, exception_message):
+def respond_error(http_error_message, start_response, exception_message, response_headers=[]):
     msg = exception_message.encode("utf8")
-    response_headers = [("Content-type", "text/plain; charset=utf-8"),
-                        ("Content-Length", str(len(msg)))]
+    response_headers.extend([("Content-type", "text/plain; charset=utf-8"),
+                             ("Content-Length", str(len(msg)))]
+                           )
     start_response(http_error_message, response_headers)
     return [msg]
 
@@ -248,7 +262,7 @@ def application(environ, start_response):
             return respond_error(err.error_message, start_response, str(err))
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
     elif auth_state == AuthenticationState.SHOW_LANDING_PAGE:
-        return show_landing_page(environ, start_response)
+        return show_landing_page(environ, start_response, path_info)
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_VALID:
         return grant_access(oauth_cookie, start_response, path_info)
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK and config.RECHECK:
