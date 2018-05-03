@@ -144,7 +144,7 @@ def show_landing_page(environ, start_response, path):
                              )
     template = env.get_template(config.LANDING_PAGE_TMPL)
     url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
-    public_url = "https://{}/{}".format(config.PUBLIC_HOST, path)
+    public_url = "https://{}{}".format(config.PUBLIC_HOST, path)
     site = template.render(link_url=url, public_url=public_url).encode("utf-8")
     status = "200 OK"
     response_headers = [("Content-type", "text/html"),
