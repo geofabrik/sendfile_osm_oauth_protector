@@ -43,6 +43,9 @@ WSGIPythonPath /srv/osm-internal-auth/
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/protected_website/
 
+    # Older versions of NaCl don't support multithreading
+    WSGIDaemonProcess processes=5 threads=1
+
     # location of the Python script with the WSGI entry point
     WSGIScriptAlias /logout/ /srv/osm-internal-auth/logout.py
     WSGIScriptAlias /show_cookie /srv/osm-internal-auth/show_cookie.py
