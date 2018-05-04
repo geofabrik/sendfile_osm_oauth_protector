@@ -37,6 +37,8 @@ The application will perform a check only in a certain interval. This is a compr
 
 If the such a check is done, valid_until will be set to the date and time when the next check is necessary. This date will be signed (and encrypted) and attackers have to break the digital signature to circumvent a recheck. 
 
+**It is recommended to disable the checking and force users to request a new access token.** Otherwise cookies published by users who want to "circumvent" the authentication "chicane" can be used until their owner revokes the access token which probably never happens. Forcing re-authentication in a certain interval, limits the usage such published cookies work until the nex authentication and authorization is necessary.
+
 
 ## Logout
 
