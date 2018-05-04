@@ -60,7 +60,7 @@ if consumer_url is None:
     report_error("No consumer URL provided")
 
 # get request token
-url = args.consumer_url + "?action=request_token"
+url = consumer_url + "?action=request_token"
 r = requests.post(url, data={}, headers=CUSTOM_HEADER)
 if r.status_code != 200:
     report_error("POST {}, received HTTP status code {} but expected 200".format(url, r.status_code))
@@ -106,7 +106,7 @@ if r.status_code != 200 and r.status_code != 302:
     report_error("POST {}, received HTTP code {} but expected 200 or 302".format(logout_url))
 
 # get final cookie
-url = args.consumer_url + "?action=get_access_token_cookie"
+url = consumer_url + "?action=get_access_token_cookie"
 r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_encr": oauth_token_secret_encr}, headers=CUSTOM_HEADER)
 
 if not args.output:
