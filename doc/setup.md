@@ -105,3 +105,13 @@ WSGIPythonPath /srv/osm-internal-auth/
 ```
 
 * Restart Apache using `sudo systemctl restart apache2`
+
+
+## Common pitfalls
+
+**Some Python imports fails**
+
+There are two common reasons:
+
+* You are running mod_wsgi with Python2 but have the Python3 version of the packages installed.
+* You haven't set or have set the wrong Python search path. If you installed this repository to `/foo/bar/oauth-tool/`, the `python-path` property of `WSGIDaemonProcess` should be set to `/foo/bar/oauth-tool/`
