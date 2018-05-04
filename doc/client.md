@@ -38,10 +38,10 @@ include in your command line invokation:
 
 ```json
 {
-  user: "my_osm_username",
-  password: "very_secret_and_difficult",
-  osm_host: "https://www.openstreetmap.org",
-  consumer_url: "https://osm-internal.download.geofabrik.de/get_cookie"
+  "user": "my_osm_username",
+  "password": "very_secret_and_difficult",
+  "osm_host": "https://www.openstreetmap.org",
+  "consumer_url": "https://osm-internal.download.geofabrik.de/get_cookie"
 }
 ```
 
