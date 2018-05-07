@@ -1,3 +1,4 @@
+import datetime
 from http.cookies import SimpleCookie
 
 
@@ -29,8 +30,11 @@ class DataCookie:
         cookie = SimpleCookie()
         if logged_in:
             cookie[self.config.COOKIE_NAME] = "login|{}|{}".format(self.config.KEY_NAME, encrypted_signed_tokens)
+            cookie[self.config.COOKIE_NAME]["Expires"] = (datetime.datetime.utcnow() + datetime.timedelta(hours=self.config.AUTH_TIMEOUT)).strftime("%a, %d %b %Y %H:%M:%S GMT")
         else:
             cookie[self.config.COOKIE_NAME] = "logout||"
+            # set expiry in the past to get this cookie delete immediately
+            cookie[self.config.COOKIE_NAME]["Expires"] = (datetime.datetime.utcnow() - datetime.timedelta(hours=2)).strftime("%a, %d %b %Y %H:%M:%S GMT")
         cookie[self.config.COOKIE_NAME]["httponly"] = True
         if self.config.COOKIE_SECURE:
             cookie[self.config.COOKIE_NAME]["secure"] = True
