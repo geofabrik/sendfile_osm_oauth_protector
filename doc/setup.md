@@ -61,6 +61,7 @@ WSGIPythonPath /srv/osm-internal-auth/
     WSGIScriptAlias /logout/ /srv/osm-internal-auth/logout.py
     WSGIScriptAlias /show_cookie /srv/osm-internal-auth/show_cookie.py
     WSGIScriptAlias /get_cookie /srv/osm-internal-auth/get_cookie.py
+    WSGIScriptAlias /cookie_status /srv/osm-internal-auth/cookie_status.py
     WSGIScriptAlias / /srv/osm-internal-auth/check_access.py
 
     # The following WSGIProcessGroup directives are only necessary with PyNaCl < 1.1.0:
@@ -72,6 +73,9 @@ WSGIPythonPath /srv/osm-internal-auth/
     </Location>
     <Location /logout>
         WSGIProcessGroup no_nacl
+    </Location>
+    <Location /cookie_status>
+        WSGIProcessGroup with_nacl
     </Location>
     <Location />
         WSGIProcessGroup with_nacl
