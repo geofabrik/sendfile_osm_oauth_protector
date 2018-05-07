@@ -102,6 +102,9 @@ class OAuthDataCookie(DataCookie):
             if len(contents) < 3 or contents[0] != "login":
                 if is_redirected_from_osm:
                     return AuthenticationState.LOGGED_IN
+                if landing_page[0] != "true":
+                    return AuthenticationState.SHOW_LANDING_PAGE
+                # landing page has been seen already
                 return AuthenticationState.NONE
             key_name = contents[1]
             self._load_read_keys(key_name)
@@ -120,6 +123,10 @@ class OAuthDataCookie(DataCookie):
             self.valid_until = datetime.datetime.strptime(parts[2], "%Y-%m-%dT%H:%M:%S")
         except Exception as err:
             raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
+        # If users sends us an old cookie but it is too old and has parameters like being redirected back to our site,
+        # treat him like being redirected from OSM back to our site.
+        if is_redirected_from_osm and datetime.datetime.utcnow() > self.valid_until:
+            return AuthenticationState.LOGGED_IN
         if datetime.datetime.utcnow() > self.valid_until:
             return AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK
         return AuthenticationState.OAUTH_ACCESS_TOKEN_VALID
