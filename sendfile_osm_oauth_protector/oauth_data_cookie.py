@@ -161,7 +161,8 @@ class OAuthDataCookie(DataCookie):
         oauth = OAuth1(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=self.access_token,
                        resource_owner_secret=self.access_token_secret)
         try:
-            r = requests.get(url="https://api.openstreetmap.org/api/0.6/user/details", auth=oauth)
+            url = "{}user/details".format(self.config.API_URL_BASE)
+            r = requests.get(url=url, auth=oauth)
         except ConnectionError as err:
             raise OAuthError("failed to (re)check the authorization", "502 Bad Gateway") from err
         if r.status_code == 200:

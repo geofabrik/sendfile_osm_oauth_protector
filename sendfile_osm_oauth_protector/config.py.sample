@@ -23,6 +23,7 @@ class Config:
         AUTHORIZATION_URL: URL the user should be redirected to in order to authorize your application the
                            necessary permissions
         ACCESS_TOKEN_URL: URL to request an access token
+        API_URL_BASE: URL base of the OSM API to be used
         KEY_DIR: path to a directory where the keys are stored
         KEY_NAME: default key to use (prefix of the file name)
 
@@ -46,6 +47,7 @@ class Config:
         self.REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
         self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"
         self.ACCESS_TOKEN_URL = "https://www.openstreetmap.org/oauth/access_token"
+        self.API_URL_BASE = "https://api.openstreetmap.org/api/0.6/"
 
         self.CLIENT_KEY = "STUVekasdfghjklqwertzuioyxcvbnm654gh"
         self.CLIENT_SECRET = "A7650123456789lokimjunhzbgtvfrcdexyX8USHPX"
