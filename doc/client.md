@@ -49,9 +49,10 @@ include in your command line invokation:
 ## Which changes are necessary to your existing toolchain?
 
 * You must provide a valid cookie for each request.
-* If the server responds with HTTP status code 302 and redirects you to
-  `www.openstreetmap.org/authorize`, your cookie is not valid any more. You
-  have to re-run this program to retrieve a new one and try your request again.
+* You can check if your cookie is valid using the
+  [cookie status API](cookie_status_api.md).  If this API tells you that your
+  cookie expired, you have to re-run this program to retrieve a new one and try
+  your request again.
 
 If you use *wget* to download files, add `--load-cookies /path/to/cookie_file
 --max-redirect 0` to your invokation of wget. `--max-redirects 0` disable

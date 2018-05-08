@@ -18,6 +18,7 @@ to access the protected ressources without human interaction.
 * [how this tool works](doc/cookie.md) and its usage of cookies and their content
 * [setup](doc/setup.md)
 * [client documentation](doc/client.md) explaining the usage of protected ressources using scripts
+* [cookie status API](doc/cookie_status_api.md)
 
 ## License
 
