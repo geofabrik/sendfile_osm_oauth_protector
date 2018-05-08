@@ -5,6 +5,7 @@ import json
 import re
 import requests
 import sys
+from getpass import getpass
 
 CUSTOM_HEADER = {"user-agent": "oauth_cookie_client.py"}
 
@@ -45,13 +46,13 @@ if args.settings is not None:
 
 username = settings.get("user", args.user)
 if username is None:
-    username = input("Please enter your user name and press ENTER:")
+    username = input("Please enter your user name and press ENTER: ")
 if username is None:
     report_error("The username must not be empty.")
 password = settings.get("password", args.password)
 if password is None:
-    password = input("Please enter your password and press ENTER:")
-if password is None:
+    password = getpass("Please enter your password and press ENTER: ")
+if len(password) == 0:
     report_error("The password must not be empty.")
 
 osm_host = settings.get("osm_host", args.osm_host)
