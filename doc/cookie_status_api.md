@@ -24,12 +24,15 @@ You can decide what you prefer to use.
 }
 ```
 
-The JSON payload contains following fields. `cookie_status` and `description`
+The JSON payload contains following properties. `cookie_status` and `description`
 have the same meaning.
 
 * `cookie_status`: short status description
 * `description`: explanation for humans
 * `http_status_code`: the HTTP status code
+* `expires`: date of expiry of the cookie, the format is `%Y-%m-%dT%H:%M:%SZ`,
+  e.g. `2018-05-08T13:51:12Z`. This property is `null` if it is not applyable
+  (e.g. no cookie provided, errors).
 
 Values of `cookie_status` (associated HTTP status code in braces):
 

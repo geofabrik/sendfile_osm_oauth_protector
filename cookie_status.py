@@ -12,21 +12,24 @@ config = Config()
 key_manager = KeyManager(config.KEY_DIR)
 
 
-def build_json(code, message, description):
-    response = {"http_status_code": code, "cookie_status": message, "description": description}
+def build_json(code, message, description, expires=None):
+    valid_until = None
+    if expires is not None:
+        valid_until = expires.strftime("%Y-%m-%dT%H:%M:%SZ")
+    response = {"http_status_code": code, "cookie_status": message, "description": description, "valid_until": valid_until}
     return json.dumps(response, indent=2)
 
 
-def cookie_outdated(start_response):
-    return respond_error("401 Unauthorized", start_response, "expired_or_invalid", "Your cookie is expired or invalid.")
+def cookie_outdated(start_response, expires):
+    return respond_error("401 Unauthorized", start_response, "expired_or_invalid", "Your cookie is expired or invalid.", expires)
 
 
-def cookie_valid(start_response):
-    return respond_error("200 OK", start_response, "valid", "Your cookie is valid.")
+def cookie_valid(start_response, expires):
+    return respond_error("200 OK", start_response, "valid", "Your cookie is valid.", expires)
 
 
-def respond_error(status_code, start_response, message, description):
-    data = build_json(status_code, message, description)
+def respond_error(status_code, start_response, message, description, expires=None):
+    data = build_json(status_code, message, description, expires)
     msg = data.encode("utf8")
     response_headers = [("Content-type", "text/json; charset=utf-8"),
                         ("Content-Length", str(len(msg)))]
@@ -44,11 +47,11 @@ def application(environ, start_response):
 
     auth_state = oauth_cookie.get_state()
     if auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_VALID:
-        return cookie_valid(start_response)
+        return cookie_valid(start_response, oauth_cookie.valid_until)
     elif auth_state == AuthenticationState.OAUTH_ACCESS_TOKEN_RECHECK and config.RECHECK:
         if oauth_cookie.check_with_osm_api():
-            return cookie_valid(start_response)
+            return cookie_valid(start_response, oauth_cookie.valid_until)
         return respond_error("403 Forbidden", start_response, "access_token_use_failed", "We are unable to verify if you are a member of the OSM community. Your OSM account is blocked or you revoked our OAuth access token.")
     elif oauth_cookie.valid_until < datetime.datetime.utcnow():
-        return cookie_outdated(start_response)
+        return cookie_outdated(start_response, oauth_cookie.valid_until)
     return respond_error("400 Bad Request", start_response, "unknown", "We don't know but we are sure that your cookie doesn't work.")
