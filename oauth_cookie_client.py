@@ -40,8 +40,7 @@ parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help
 args = parser.parse_args()
 settings = {}
 if args.settings is not None:
-    with open(args.settings, "rb") as settingsfile:
-        settings = json.load(settingsfile)
+    settings = json.load(args.settings)
 
 username = settings.get("user", args.user)
 if username is None:
@@ -112,5 +111,4 @@ r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_enc
 if not args.output:
     sys.stdout.write(r.text)
 else:
-    with open(args.output, "w") as outfile:
-        outfile.write(r.text)
+    args.output.write(r.text)
