@@ -18,7 +18,7 @@ You can decide what you prefer to use.
 
 ```json
 {
-  "cookie_status": "expired_or_invalid",
+  "cookie_status": "expired",
   "http_status_code": "401 Unauthorized",
   "description": "Your cookie is expired or invalid."
 }
@@ -37,8 +37,7 @@ have the same meaning.
 Values of `cookie_status` (associated HTTP status code in braces):
 
 * `valid`: Your cookie is valid. (200)
-* `expired_or_invalid`: Your cookie expired, you have to retrieve a new one.
-  This code is also returned for cookies the API could not understand. (401)
+* `expired`: Your cookie expired, you have to retrieve a new one. (401)
 * `no_cookie_provided`: You did not provide a cookie. (400)
 * `cookie_verification_failed`: Your cookie was encrypted and signed with a
   different key (in most cases on a different server). (400)

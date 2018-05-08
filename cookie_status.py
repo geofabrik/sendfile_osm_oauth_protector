@@ -21,7 +21,7 @@ def build_json(code, message, description, expires=None):
 
 
 def cookie_outdated(start_response, expires):
-    return respond_error("401 Unauthorized", start_response, "expired_or_invalid", "Your cookie is expired or invalid.", expires)
+    return respond_error("401 Unauthorized", start_response, "expired", "Your cookie is expired.", expires)
 
 
 def cookie_valid(start_response, expires):
