@@ -3,7 +3,7 @@ import base64
 import urllib.parse
 from http.cookies import SimpleCookie
 import requests
-from requests_oauthlib import OAuth1, OAuth1Session
+from requests_oauthlib import OAuth1
 import nacl.exceptions
 
 from sendfile_osm_oauth_protector.data_cookie import DataCookie
@@ -66,15 +66,20 @@ class OAuthDataCookie(DataCookie):
             oauth_token_secret = self.write_crypto_box.decrypt(base64.urlsafe_b64decode(oauth_token_secret_encr))
         except Exception as err:
             raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
+        oauth = OAuth1(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=oauth_token,
+                       resource_owner_secret=oauth_token_secret)
+        r = requests.post(url=self.config.ACCESS_TOKEN_URL, auth=oauth)
+        if r.status_code == 401:
+            message = "The OSM API returned status \"401 Unauthorized\" when fetching an access token from the OSM API. You most probably declined any requested permissions for this application."
+            if len(r.content) > 0:
+                message += "\n------\n{}".format(r.content)
+            raise OAuthError(message, "401 Unauthorized")
+        if r.status_code != 200:
+            raise OAuthError("failed to retrieve access token, status {}, message {}".format(r.status_code, r.content), "502 Bad Gateway")
+        oauth_tokens = urllib.parse.parse_qs(r.content)
         try:
-            oauth = OAuth1Session(self.config.CLIENT_KEY, client_secret=self.config.CLIENT_SECRET, resource_owner_key=oauth_token,
-                                  resource_owner_secret=oauth_token_secret)
-            oauth_tokens = oauth.fetch_access_token(self.config.ACCESS_TOKEN_URL)
-        except ValueError as err:
-            raise OAuthError(str(err), "500 Internal Server Error") from err
-        try:
-            self.access_token = oauth_tokens.get("oauth_token")
-            self.access_token_secret = oauth_tokens.get("oauth_token_secret")
+            self.access_token = oauth_tokens["oauth_token"][0]
+            self.access_token_secret = oauth_tokens["oauth_token_secret"][0]
         except KeyError as err:
             raise OAuthError("Incomplete response of OSM API, oauth_token or oauth_token_secret is missing.", "502 Bad Gateway") from err
 
