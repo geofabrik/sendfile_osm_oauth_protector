@@ -30,10 +30,10 @@ def find_authenticity_token(response):
 
 
 parser = argparse.ArgumentParser(description="Get a cookie to access service protected by OpenStreetMap OAuth 1.0a and osm-internal-oauth")
-parser.add_argument("-o", "--output", default=None, help="write the cookie to the specified file instead to STDOUT", type=open)
+parser.add_argument("-o", "--output", default=None, help="write the cookie to the specified file instead to STDOUT", type=argparse.FileType("w+"))
 parser.add_argument("-u", "--user", default=None, help="user name", type=str)
 parser.add_argument("-p", "--password", default=None, help="Password, leave empty to force input from STDIN.", type=str)
-parser.add_argument("-s", "--settings", default=None, help="JSON file containing parameters", type=open)
+parser.add_argument("-s", "--settings", default=None, help="JSON file containing parameters", type=argparse.FileType("r"))
 parser.add_argument("-c", "--consumer-url", default=None, help="URL of the OAuth cookie generation API of the provider who provides you OAuth protected access to their ressources", type=str)
 parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help="hostname of the OSM API/website to use (e.g. 'www.openstreetmap.org' or 'master.apis.dev.openstreetmap.org')", type=str)
 
@@ -41,8 +41,7 @@ parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help
 args = parser.parse_args()
 settings = {}
 if args.settings is not None:
-    with open(args.settings, "rb") as settingsfile:
-        settings = json.load(settingsfile)
+    settings = json.load(args.settings)
 
 username = settings.get("user", args.user)
 if username is None:
@@ -113,5 +112,4 @@ r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_enc
 if not args.output:
     sys.stdout.write(r.text)
 else:
-    with open(args.output, "w") as outfile:
-        outfile.write(r.text)
+    args.output.write(r.text)
