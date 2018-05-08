@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(description="Get a cookie to access service pro
 parser.add_argument("-o", "--output", default=None, help="write the cookie to the specified file instead to STDOUT", type=argparse.FileType('w+'))
 parser.add_argument("-u", "--user", default=None, help="user name", type=str)
 parser.add_argument("-p", "--password", default=None, help="Password, leave empty to force input from STDIN.", type=str)
-parser.add_argument("-s", "--settings", default=None, help="JSON file containing parameters", type=open)
+parser.add_argument("-s", "--settings", default=None, help="JSON file containing parameters", type=argparse.FileType('r'))
 parser.add_argument("-c", "--consumer-url", default=None, help="URL of the OAuth cookie generation API of the provider who provides you OAuth protected access to their ressources", type=str)
 parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help="hostname of the OSM API/website to use (e.g. 'www.openstreetmap.org' or 'master.apis.dev.openstreetmap.org')", type=str)
 
