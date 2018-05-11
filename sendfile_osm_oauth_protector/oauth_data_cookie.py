@@ -74,9 +74,9 @@ class OAuthDataCookie(DataCookie):
             if len(r.content) > 0:
                 message += "\n------\n{}".format(r.content)
             raise OAuthError(message, "401 Unauthorized")
-        if r.status_code != 200:
-            raise OAuthError("failed to retrieve access token, status {}, message {}".format(r.status_code, r.content), "502 Bad Gateway")
-        oauth_tokens = urllib.parse.parse_qs(r.content)
+        if r.status_code != 200 or r.headers.get("Content-Type", "").split(";")[0].strip() != "text/plain":
+            raise OAuthError("Error: Failed to retrieve access token\nstatus code: {}\ncontent-type: {}\nrepsonse: {}".format(r.status_code, r.headers.get("Content-Type", ""), r.text), "502 Bad Gateway")
+        oauth_tokens = urllib.parse.parse_qs(r.text)
         try:
             self.access_token = oauth_tokens["oauth_token"][0]
             self.access_token_secret = oauth_tokens["oauth_token_secret"][0]
