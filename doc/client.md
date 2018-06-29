@@ -17,8 +17,10 @@ reimplementation of the [automatic OAuth authorization procedure of
 JOSM](https://josm.openstreetmap.de/browser/josm/trunk/src/org/openstreetmap/josm/gui/oauth/OsmOAuthAuthorizationClient.java).
 After filling out the login and authorization forms, the program sends a second
 POST request to
-`https://PROTECTED_WEBSITE/get_cookie?action=get_access_token_cookie` to
-retrieve the cookie to be used.
+`https://PROTECTED_WEBSITE/get_cookie?action=get_access_token_cookie&format=http` to
+retrieve the cookie to be used. The parameter `format` determines the output
+format. Possible values are `http` for the value of the HTTP `Set-Cookie`
+header or `netscape` for the content of a Netscape cookie jar file.
 
 Your OpenStreetMap username and password has to be saved in plain text on the
 machine which runs this program!

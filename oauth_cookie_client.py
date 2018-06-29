@@ -35,6 +35,7 @@ parser.add_argument("-u", "--user", default=None, help="user name", type=str)
 parser.add_argument("-p", "--password", default=None, help="Password, leave empty to force input from STDIN.", type=str)
 parser.add_argument("-s", "--settings", default=None, help="JSON file containing parameters", type=argparse.FileType("r"))
 parser.add_argument("-c", "--consumer-url", default=None, help="URL of the OAuth cookie generation API of the provider who provides you OAuth protected access to their ressources", type=str)
+parser.add_argument("-f", "--format", default="http", help="Output format: 'http' for the value of the HTTP 'Cookie' header or 'netscape' for a Netscape-like cookie jar file", type=str, choices=["http", "netscape"])
 parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help="hostname of the OSM API/website to use (e.g. 'www.openstreetmap.org' or 'master.apis.dev.openstreetmap.org')", type=str)
 
 
@@ -106,7 +107,7 @@ if r.status_code != 200 and r.status_code != 302:
     report_error("POST {}, received HTTP code {} but expected 200 or 302".format(logout_url))
 
 # get final cookie
-url = consumer_url + "?action=get_access_token_cookie"
+url = consumer_url + "?action=get_access_token_cookie&format={}".format(args.format)
 r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_encr": oauth_token_secret_encr}, headers=CUSTOM_HEADER)
 
 if not args.output:

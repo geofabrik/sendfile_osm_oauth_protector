@@ -47,7 +47,7 @@ def get_request_token(environ, start_response):
     return [result_enc]
 
 
-def get_access_token(environ, start_response):
+def get_access_token(environ, start_response, output_format):
     # parse POST data
     try:
         request_body_size = int(environ.get("CONTENT_LENGTH", 0))
@@ -56,6 +56,8 @@ def get_access_token(environ, start_response):
     if request_body_size <= 0:
         return respond_error("400 Bad Request", start_response, "Missing or unreadable 'Content-Length' header")
     request_body = environ["wsgi.input"].read(request_body_size).decode()
+    if output_format not in ["http", "netscape"]:
+        return respond_error("400 Bad Request", start_response, "Unsupported output format. Valid vaulues: http, netscape")
 
     new_environ = {"QUERY_STRING": request_body}
     oauth_data_cookie = OAuthDataCookie(config, new_environ, key_manager)
@@ -65,7 +67,7 @@ def get_access_token(environ, start_response):
             return respond_error("502 Bad Gateway", start_response, "Failed to verify if you are allowed to access the protected resources")
     except OAuthError as err:
         respond_error("500 Internal Server Error", start_response, str(err))
-    cookie = oauth_data_cookie.output().encode("ascii")
+    cookie = oauth_data_cookie.output(output_format).encode("ascii")
 
     response_headers = [("Content-type", "text/plain; charset=ascii"),
                         ("Content-length", str(len(cookie)))]
@@ -78,10 +80,11 @@ def application(environ, start_response):
         return respond_error("400 Bad Request", start_response, "Only POST requests are permitted")
     params = urllib.parse.parse_qs(environ["QUERY_STRING"])
     action = params.get("action", None)
+    output_format = params.get("format", ["http"])[0]
     if action is None:
         return respond_error("400 Bad Request", start_response, "Parameter 'action' is missing")
     if action[0] == "request_token":
         return get_request_token(environ, start_response)
     elif action[0] == "get_access_token_cookie":
-        return get_access_token(environ, start_response)
+        return get_access_token(environ, start_response, output_format)
     return respond_error("400 Bad Request", start_response, "The requested 'action' is not supported.")

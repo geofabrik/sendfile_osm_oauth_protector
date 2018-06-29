@@ -176,7 +176,7 @@ class OAuthDataCookie(DataCookie):
             raise OAuthError("received error 500 when (re)checking the authorization", "502 Bad Gateway")
         return False
 
-    def output(self):
+    def output(self, output_format="http"):
         """
         Return an instance of http.cookies.SimpleCookie.
 
@@ -192,4 +192,6 @@ class OAuthDataCookie(DataCookie):
         tokens = "{}|{}|{}".format(self.access_token, self.access_token_secret, valid_until)
         access_tokens_encr = self.write_crypto_box.encrypt(tokens.encode("ascii"), nonce)
         access_tokens_encr_signed = base64.urlsafe_b64encode(self.sign_key.sign(access_tokens_encr)).decode("ascii")
-        return self._output_cookie(True, access_tokens_encr_signed)
+        if output_format == "http":
+            return self._output_cookie_http(True, access_tokens_encr_signed)
+        return self._output_cookie_netscape(True, access_tokens_encr_signed)
