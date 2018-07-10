@@ -50,6 +50,7 @@ class DataCookie:
             # set expiry in the past to get this cookie delete immediately
             cookie[self.config.COOKIE_NAME]["expires"] = (self._get_expiry_date(-2)).strftime(COOKIE_DATE_FORMAT)
         cookie[self.config.COOKIE_NAME]["httponly"] = True
+        cookie[self.config.COOKIE_NAME]["path"] = "/"
         if self.config.COOKIE_SECURE:
             cookie[self.config.COOKIE_NAME]["secure"] = True
         return cookie
@@ -63,7 +64,8 @@ class DataCookie:
         exp = str(int(datetime.datetime.strptime(c[self.config.COOKIE_NAME]["expires"], COOKIE_DATE_FORMAT).timestamp()))
         val = c[self.config.COOKIE_NAME].value
         values.extend([exp, self.config.COOKIE_NAME, val])
-        net_str = "." + "\t".join(values)
+        net_str = "# Netscape HTTP Cookie File\n"
+        net_str += "." + "\t".join(values)
         return net_str
 
     def logout_cookie(self):
