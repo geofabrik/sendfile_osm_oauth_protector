@@ -147,7 +147,7 @@ def show_landing_page(environ, start_response, path):
     url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
     public_url = "https://{}{}".format(config.PUBLIC_HOST, path)
     site = template.render(link_url=url, public_url=public_url).encode("utf-8")
-    status = "200 OK"
+    status = "403 Forbidden"
     response_headers = [("Content-type", "text/html"),
                         ("Content-length", str(len(site)))]
     start_response(status, response_headers)
