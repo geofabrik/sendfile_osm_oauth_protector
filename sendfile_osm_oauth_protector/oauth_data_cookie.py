@@ -115,15 +115,12 @@ class OAuthDataCookie(DataCookie):
             self._load_read_keys(key_name)
             signed = contents[2].encode("ascii")
             access_tokens_encr = self.verify_key.verify(base64.urlsafe_b64decode(signed))
-        except binascii.Error:
-            # unable to decode Base64 encoded content
-            return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
-        except nacl.exceptions.BadSignatureError:
-            return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
         except KeyError:
             # if something fails here, they normal authentication-authorization loop should start and
             # users not treated like not having seen the landing page
             return AuthenticationState.NONE
+        except Exception:
+            return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
         try:
             parts = self.read_crypto_box.decrypt(access_tokens_encr).decode("ascii").split("|")
             self.access_token = parts[0]
