@@ -36,7 +36,7 @@ or provide it by command line option:
 
 `python3 oauth_cookie_client.py --output cookie.txt --user OSMUsername --password OSMPassword --consumer-url https://osm-internal.download.geofabrik.de/get_cookie --format netscape --osm-host https://www.openstreetmap.org/`
 
-Username and password are optional. You will be promted for if one or both are not provide in the file or by the respective command line option.
+Username and password are optional. You will be prompted for if one or both are not provide in the file or by the respective command line option.
 The cookie will be stored in cookie.txt as defined in the `--output` and you can use it with `curl` or `wget` to download files with metadata as follows:
 
 `curl -b ./cookie.txt https://osm-internal.download.geofabrik.de/europe/germany/baden-wuerttemberg/stuttgart-regbez.poly`
