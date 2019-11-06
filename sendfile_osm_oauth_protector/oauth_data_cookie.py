@@ -83,6 +83,53 @@ class OAuthDataCookie(DataCookie):
         except KeyError as err:
             raise OAuthError("Incomplete response of OSM API, oauth_token or oauth_token_secret is missing.", "502 Bad Gateway") from err
 
+    def parse_cookie_step1(self):
+        """Get the three main parts of the cookie: state, key name and signed content.
+
+        Returns:
+            list of string
+        """
+        return self.cookie[self.config.COOKIE_NAME].value.split("|")
+
+    def parse_cookie_step2(self, contents):
+        """
+        Verify the cookie.
+
+        Args:
+            contents : result of parse_cookie_step1()
+
+        Returns:
+            str : encrypted access tokesn (can be None)
+
+        Throws:
+            KeyError : key not found
+            nacl.exceptions.BadSignatureError : invalid signature
+        """
+        key_name = contents[1]
+        self._load_read_keys(key_name)
+        signed = contents[2].encode("ascii")
+        access_tokens_encr = self.verify_key.verify(base64.urlsafe_b64decode(signed))
+        return access_tokens_encr
+
+    def parse_cookie_step3(self, access_tokens_encr):
+        """
+        Get decrypted access tokens and validity date of the cookie. This method sets the
+        properties self.access_token, self.access_token_secret and self.valid_until
+
+        Args:
+            access_tokens_encr (str) : result of parse_cookie_step2()
+
+        Throws:
+            OAuthError : decryption has failed
+        """
+        try:
+            parts = self.read_crypto_box.decrypt(access_tokens_encr).decode("ascii").split("|")
+            self.access_token = parts[0]
+            self.access_token_secret = parts[1]
+            self.valid_until = datetime.datetime.strptime(parts[2], "%Y-%m-%dT%H:%M:%S")
+        except Exception as err:
+            raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
+
     def get_state(self):
         """
         Check if the signature of the cookie is valid, decrypt the cookie.
@@ -103,7 +150,7 @@ class OAuthDataCookie(DataCookie):
         elif self.cookie is None:
             return AuthenticationState.SHOW_LANDING_PAGE
         try:
-            contents = self.cookie[self.config.COOKIE_NAME].value.split("|")
+            contents = self.parse_cookie_step1()
             if len(contents) < 3 or contents[0] != "login":
                 if is_redirected_from_osm:
                     return AuthenticationState.LOGGED_IN
@@ -111,23 +158,14 @@ class OAuthDataCookie(DataCookie):
                     return AuthenticationState.SHOW_LANDING_PAGE
                 # landing page has been seen already
                 return AuthenticationState.NONE
-            key_name = contents[1]
-            self._load_read_keys(key_name)
-            signed = contents[2].encode("ascii")
-            access_tokens_encr = self.verify_key.verify(base64.urlsafe_b64decode(signed))
+            access_tokens_encr = self.parse_cookie_step2(contents)
         except KeyError:
             # if something fails here, they normal authentication-authorization loop should start and
             # users not treated like not having seen the landing page
             return AuthenticationState.NONE
         except Exception:
             return AuthenticationState.SIGNATURE_VERIFICATION_FAILED
-        try:
-            parts = self.read_crypto_box.decrypt(access_tokens_encr).decode("ascii").split("|")
-            self.access_token = parts[0]
-            self.access_token_secret = parts[1]
-            self.valid_until = datetime.datetime.strptime(parts[2], "%Y-%m-%dT%H:%M:%S")
-        except Exception as err:
-            raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
+        self.parse_cookie_step3(access_tokens_encr)
         # If users sends us an old cookie but it is too old and has parameters like being redirected back to our site,
         # treat him like being redirected from OSM back to our site.
         if is_redirected_from_osm and datetime.datetime.utcnow() > self.valid_until:
