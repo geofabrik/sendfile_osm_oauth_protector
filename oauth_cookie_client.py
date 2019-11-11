@@ -110,7 +110,11 @@ if r.status_code != 200 and r.status_code != 302:
 url = consumer_url + "?action=get_access_token_cookie&format={}".format(args.format)
 r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_encr": oauth_token_secret_encr}, headers=CUSTOM_HEADER)
 
+cookie_text = r.text
+if not cookie_text.endswith("\n"):
+    cookie_text += "\n"
+
 if not args.output:
-    sys.stdout.write(r.text)
+    sys.stdout.write(cookie_text)
 else:
-    args.output.write(r.text)
+    args.output.write(cookie_text)
