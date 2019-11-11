@@ -10,15 +10,41 @@ to access the protected ressources without human interaction.
 
 ## Requirements
 
-* Your website is a static website, nothing is generated dynamically.
-* You use Apache to serve files.
+### Client
+
+The client requires Python 3 and the Requets library.
+
+Debian/Ubunut: `apt install python3 python3-requets`
+
+Pip: `pip install requests`
+
+
+### Server
+
+This tool is suitable for statically served websites only using Apache.
+
+Requirements:
+
+* Apache
+* mod_xsendfile
+* mod_wsgi or any other WSGI server
+
 
 ## Documentation
 
-* [how this tool works](doc/cookie.md) and its usage of cookies and their content
-* [setup](doc/setup.md)
-* [client documentation](doc/client.md) explaining the usage of protected ressources using scripts
-* [cookie status API](doc/cookie_status_api.md)
+### For users
+
+This repository contains a [client programme written in Python](oauth_cookie_client.py) to retrieve cookies without user interaction. The [client documentation](doc/client.md) explains its usage.
+
+There is a [cookie status API](doc/cookie_status_api.md) telling you whether your cookie is still valid. Depending on server settings, cookies are valid for a few hours only (default: 48 hours).
+
+If you are interested how things work, have a look at the [desription](doc/cookie.md) what information the cookie contains.
+
+
+### For admins
+
+If you want to put a static website behind a OSM authentication, read the [setup documentation](doc/setup.md) and [how this tool works](doc/cookie.md).
+
 
 ## License
 

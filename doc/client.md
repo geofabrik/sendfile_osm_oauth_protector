@@ -48,7 +48,7 @@ include in your command line invokation:
 ```
 
 
-## Which changes are necessary to your existing toolchain?
+## Which changes are necessary to your existing toolchain? How do I call Wget or Curl?
 
 * You must provide a valid cookie for each request.
 * You can check if your cookie is valid using the
@@ -57,16 +57,14 @@ include in your command line invokation:
   your request again.
 
 If you use *wget* to download files, add `--load-cookies /path/to/cookie_file
---max-redirect 0` to your invokation of wget. `--max-redirects 0` disable
-following redirects and wget will return a non-successfull exit code as an
-indicator that you should retrieve a new cookie.
+--max-redirect 0` to your invokation of wget.
 
 If you use *curl* to download files, add `--cookie $(cat /path/to/cookie_file)`
-to your invokation of wget and remove `-L` (short option of `--location`) to
-ignore redirects.
+to your invokation of wget.
 
-Example:
+Examples:
 
 ```sh
+wget --load-cookies cookie_output_file.txt https://osm-internal.download.geofabrik.de/seychelles-latest-internal.osm.pbf
 curl -b 'gf_download_oauth="login|2018-04-12|OuXe89NBSnaI57CZvxdha575IsKkO3xUO5wr4JsLm9imk7oHi6Kqx69RbfgCYmNvNX4BacDUOfFKgmD2ixdFDDd9Csh82t6WIf8pv1C3EWVtuLMxqdpeoxrZurgO6QEdUzTtR97GmIWdbiYBw4aBmhKQJRzD1TEl0-AlrEylTnmh-9ge0KvzVCHVwv3_U_2Ya-if5mm-g_-mmLr_EOHM1SHclvtysF6f2V2G8UrJ8N8kgyXAtt38NzZxNJ0490JMJu_Byb1EJs9yB_izRg=="' https://osm-internal.download.geofabrik.de/seychelles-latest-internal.osm.pbf
 ```
