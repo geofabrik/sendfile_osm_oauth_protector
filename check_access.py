@@ -7,7 +7,7 @@ import nacl.utils
 import base64
 import nacl.public
 import nacl.utils
-import xdg.Mime
+import mimetypes
 from http.cookies import SimpleCookie
 import jinja2
 
@@ -26,6 +26,10 @@ env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=config.TEMPLA
                          trim_blocks=True,
                          autoescape=True
                          )
+mimetypes.add_type("application/octet-stream", ".pbf", True)
+mimetypes.add_type("application/x-gzip", ".gz", True)
+mimetypes.add_type("application/x-bzip2", ".bz2", True)
+mimetypes.add_type("application/vnd.google-earth.kml+xml", ".kml", True)
 
 
 def reconstruct_url(environ, with_query_string=False, append_to_query_string=None, skip_key=None):
@@ -125,8 +129,8 @@ def grant_access(oauth_cookie, start_response, path):
                              response_headers)
     response_headers.append(("X-Sendfile", path))
     # set Content-type
-    mime_type = str(xdg.Mime.get_type(path))
-    response_headers.append(("Content-type", mime_type))
+    mime_type = mimetypes.guess_type(path, False)
+    response_headers.append(("Content-type", mime_type[0]))
     start_response(status, response_headers)
     return []
 
