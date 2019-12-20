@@ -5,7 +5,7 @@
 * Install Python3 and some dependencies:
 
 ```sh
-sudo apt install python3-cryptography python3-requests python3-requests-oauthlib python3-nacl python3-oauthlib python3-xdg python3-jinja2
+sudo apt install python3-cryptography python3-requests python3-requests-oauthlib python3-nacl python3-oauthlib python3-jinja2
 ```
 
 * Install and enable `mod_wsgi` (Python 3) and `mod_sendfile`. On Debian and Ubuntu do
