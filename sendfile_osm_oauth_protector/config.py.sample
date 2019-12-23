@@ -13,6 +13,7 @@ class Config:
                         to disable it and force users to go through the authentication and authorization process when AUTH_TIMEOUT is over. Otherwise users can make this
                         protection a farce by publishing their cookie.
         INDEX_PAGES (list of str): list of filenames to look for if the requested source is a directory. This is the list is the equivalent of Apache's DirectoryIndex directive.
+        MIME_TYPES (dict): additional MIME types (mapping file name suffix to MIME type)
         TEMPLATES_PATH (str): search path for templates
         LANDING_PAGE_TMPL (str): file name of the template for the landing page
         LANDING_PAGE_URL_PARAM (str): URL parameter to indicate that the user comes from the landing page
@@ -39,6 +40,13 @@ class Config:
         self.AUTH_TIMEOUT = 48
         self.RECHECK = False
         self.INDEX_PAGES = ["index.html"]
+        self.MIME_TYPES = {
+            "pbf": "application/octet-stream",
+            "gz": "application/x-gzip",
+            "bz2": "application/x-bzip2",
+            "kml": "application/vnd.google-earth.kml+xml",
+            "md5": "text/plain"
+        }
 
         self.TEMPLATES_PATH = "/home/michael/git/git.geofabrik.de/osm-internal-auth/templates/"
         self.LANDING_PAGE_TMPL = "landing_page.tmpl"
