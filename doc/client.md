@@ -7,7 +7,7 @@ automated OAuth authentication and authorization. This API is implemented in
 [get_cookie.py](../get_cookie.py) in this repository.
 
 
-## What does this tool?
+## What does this tool do?
 
 This tool requests an temporary OAuth request token by sending a POST request
 to `https://PROTECTED_WEBSITE/get_cookie?action=request_token` (The API itself
