@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import os
 import os.path
 import urllib.parse
 from requests_oauthlib import OAuth1Session
@@ -91,7 +92,27 @@ def look_for_index_file(search_directory):
         filepath = os.path.join(search_directory, filename)
         if os.path.isfile(filepath):
             return filepath
-    return search_directory
+    return None
+
+
+def handle_directory_without_trailing_slash(start_response, path):
+    """
+    Respond to requests which point to a directory but where the URL does not end with a slash.
+    """
+    return redirect('302 Found', '{}/'.format(path), start_response)
+
+
+def index_listing(path_on_disk, path, start_response):
+    template = env.get_template(config.INDEX_LISTING_TEMPLATE)
+    files = os.listdir(path_on_disk)
+    files = [ f for f in files if not f.startswith('.') ]
+    is_dir = [ os.path.isdir(os.path.join(path_on_disk, f)) for f in files ]
+    site = template.render(files=files, is_dir=is_dir, path=path).encode("utf-8")
+    status = "200 OK"
+    response_headers = [("Content-type", "text/html"),
+                        ("Content-length", str(len(site)))]
+    start_response(status, response_headers)
+    return [site]
 
 
 def grant_access(oauth_cookie, start_response, path):
@@ -111,29 +132,47 @@ def grant_access(oauth_cookie, start_response, path):
     # if path is empty (i.e. directory requested), return index.html or whatever is defined in
     # config.INDEX_PAGES
     response_headers = [("Set-Cookie", oauth_cookie.output())]
-    path = "{}/{}".format(config.DOCUMENT_ROOT, path)
-    if os.path.isdir(path):
+    document_root = config.DOCUMENT_ROOT
+    if document_root.endswith("/"):
+        document_root = document_root[:-1]
+    path_on_disk = ""
+    if path.startswith("/") and len(path) > 1:
+        path_on_disk = os.path.join(document_root, path[1:])
+    else:
+        path_on_disk = document_root
+    if os.path.isdir(path_on_disk) and not path.endswith('/'):
+        return handle_directory_without_trailing_slash(start_response, path)
+    if os.path.isdir(path_on_disk):
         try:
-            path = look_for_index_file(path)
+            index_file_path = look_for_index_file(path_on_disk)
         except:
             return respond_error("404 Not Found", start_response,
                                  "The requested resource could not be found or is not accessible.",
                                  response_headers)
-    if not os.path.isfile(path):
+        if index_file_path is None and config.INDEX_LISTING:
+            return index_listing(path_on_disk, path, start_response)
+        elif index_file_path is None:
+            return respond_error("404 Not Found", start_response,
+                                 "The requested resource could not be found.",
+                                 response_headers)
+        path_on_disk = index_file_path
+    elif not os.path.isfile(path_on_disk):
         return respond_error("404 Not Found", start_response,
                              "The requested resouce could not be found or is not accessible.",
                              response_headers)
-    response_headers.append(("X-Sendfile", path))
+    response_headers.append(("X-Sendfile", path_on_disk))
     # set Content-type
-    mime_type = mimetypes.guess_type(path, False)
+    mime_type = mimetypes.guess_type(path_on_disk, False)
     if not mime_type[0]:
-        mime_type = [config.MIME_TYPES.get(os.path.splitext(path)[1], "application/octet-stream"), None]
+        mime_type = [config.MIME_TYPES.get(os.path.splitext(path_on_disk)[1], "application/octet-stream"), None]
     response_headers.append(("Content-type", mime_type[0]))
     start_response(status, response_headers)
     return []
 
 def show_landing_page(environ, start_response, path):
     filepath = "{}/{}".format(config.DOCUMENT_ROOT, path)
+    if os.path.isdir(filepath) and not path.endswith('/'):
+        return handle_directory_without_trailing_slash(start_response, path)
     if os.path.isdir(filepath):
         try:
             filepath = look_for_index_file(filepath)

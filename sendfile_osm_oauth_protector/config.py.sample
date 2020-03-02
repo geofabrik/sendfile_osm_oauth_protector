@@ -13,6 +13,8 @@ class Config:
                         to disable it and force users to go through the authentication and authorization process when AUTH_TIMEOUT is over. Otherwise users can make this
                         protection a farce by publishing their cookie.
         INDEX_PAGES (list of str): list of filenames to look for if the requested source is a directory. This is the list is the equivalent of Apache's DirectoryIndex directive.
+        INDEX_LISTING (bool): create a directory listing if no index page is present and the clients request points to a directory
+        INDEX_LISTING_TEMPLATE (str): name of the template file for the directory listing
         MIME_TYPES (dict): additional MIME types (mapping file name suffix to MIME type)
         TEMPLATES_PATH (str): search path for templates
         LANDING_PAGE_TMPL (str): file name of the template for the landing page
@@ -32,7 +34,6 @@ class Config:
         COOKIE_NAME: name of the cookie to be used to store access tokens and access token secrets
         COOKIE_SECURE: set the 'secure' tag for all authentication cookies
     """
-    """
 
     def __init__(self):
         # pylint: disable=F841
@@ -40,6 +41,8 @@ class Config:
         self.AUTH_TIMEOUT = 48
         self.RECHECK = False
         self.INDEX_PAGES = ["index.html"]
+        self.INDEX_LISTING = False
+        self.INDEX_LISTING_TEMPLATE = "index.tmpl"
         self.MIME_TYPES = {
             "pbf": "application/octet-stream",
             "gz": "application/x-gzip",

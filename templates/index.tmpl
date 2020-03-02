@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <meta name="description" content="Directory listing of {{ path }}">
+        <meta name="robots" content="noindex,nofollow">
+        <title>Directory listing of {{ path }}</title>
+    </head>
+    <body>
+        <h1>Content of {{ path }}</h1>
+        <ul>
+            {% if path != '/' %}<li><a href="../">../</a> (parent directory)</li>{% endif %}
+            {% for i in range(files|length) %}
+            <li><a href="{{ files[i] }}">{{ files[i] }}{% if is_dir[i] %}/{% endif %}</a></li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>
