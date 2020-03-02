@@ -170,20 +170,6 @@ def grant_access(oauth_cookie, start_response, path):
     return []
 
 def show_landing_page(environ, start_response, path):
-    filepath = "{}/{}".format(config.DOCUMENT_ROOT, path)
-    if os.path.isdir(filepath) and not path.endswith('/'):
-        return handle_directory_without_trailing_slash(start_response, path)
-    if os.path.isdir(filepath):
-        try:
-            filepath = look_for_index_file(filepath)
-        except:
-            return respond_error("404 Not Found", start_response,
-                                 "The requested resource could not be found or is not accessible."
-                                 )
-    if not os.path.isfile(filepath):
-        return respond_error("404 Not Found", start_response,
-                             "The requested resouce could not be found or is not accessible."
-                             )
     template = env.get_template(config.LANDING_PAGE_TMPL)
     url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
     public_url = "https://{}{}".format(config.PUBLIC_HOST, path)
