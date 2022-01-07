@@ -94,7 +94,7 @@ if r.status_code != 200:
     report_error("GET {}, received HTTP code {} but expected 200".format(authorize_url, r.status_code))
 authenticity_token = find_authenticity_token(r.text)
 
-post_data = {"oauth_token": oauth_token, "oauth_callback": "", "authenticity_token": authenticity_token, "allow_read_prefs": "yes", "commit": "Save changes"}
+post_data = {"oauth_token": oauth_token, "oauth_callback": "", "authenticity_token": authenticity_token, "allow_read_prefs": [0, 1], "commit": "Save changes"}
 authorize_url = "{}/oauth/authorize".format(osm_host)
 r = s.post(authorize_url, data=post_data, headers=CUSTOM_HEADER)
 if r.status_code != 200:
