@@ -2,15 +2,9 @@
 
 import os
 import os.path
-import urllib.parse
-from requests_oauthlib import OAuth1Session
-import nacl.utils
-import base64
-import nacl.public
-import nacl.utils
 import mimetypes
-from http.cookies import SimpleCookie
 import jinja2
+import urllib.parse
 
 from sendfile_osm_oauth_protector.oauth_data_cookie import OAuthDataCookie
 from sendfile_osm_oauth_protector.authentication_state import AuthenticationState
@@ -27,53 +21,6 @@ env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=config.TEMPLA
                          trim_blocks=True,
                          autoescape=True
                          )
-
-
-def reconstruct_url(environ, with_query_string=False, append_to_query_string=None, skip_key=None):
-    """
-    Reconstruct the URL.
-
-    The implementation was taken from PEP 0333
-
-    Args:
-        environ (Dictionary): contains CGI environment variables (see PEP 0333)
-        with_query_string (Boolean): add the query string if any
-        append_to_query_string (str): append this ESCAPED string to the query string. No leading `&` character required.
-        skip_keys (str): keys of the old query string which should not be appended to the query string
-
-    Returns:
-        str: the URL
-    """
-    url = environ["wsgi.url_scheme"] + "://"
-
-    if environ.get("HTTP_HOST"):
-        url += environ["HTTP_HOST"]
-    else:
-        url += environ["SERVER_NAME"]
-
-        if environ["wsgi.url_scheme"] == "https":
-            if environ["SERVER_PORT"] != "443":
-                url += ":" + environ["SERVER_PORT"]
-        else:
-            if environ["SERVER_PORT"] != "80":
-                url += ":" + environ["SERVER_PORT"]
-
-    url += urllib.parse.quote(environ.get("SCRIPT_NAME", ""))
-    url += urllib.parse.quote(environ.get("PATH_INFO", ""))
-    if with_query_string and environ.get('QUERY_STRING'):
-        qs = environ['QUERY_STRING'].split("&")
-        # remove skip_key and its value from query_string
-        if skip_key is not None:
-            for p in qs:
-                if p.startswith("{}=".format(skip_key)):
-                    qs.remove(p)
-        if append_to_query_string is not None:
-            qs.append(append_to_query_string)
-        url += '?' + "&".join(qs)
-    else:
-        if append_to_query_string is not None:
-            url += '?' + append_to_query_string
-    return url
 
 
 def look_for_index_file(search_directory):
@@ -169,9 +116,10 @@ def grant_access(oauth_cookie, start_response, path):
     start_response(status, response_headers)
     return []
 
+
 def show_landing_page(environ, start_response, path):
     template = env.get_template(config.LANDING_PAGE_TMPL)
-    url = reconstruct_url(environ, True, "landing_page=true", config.LANDING_PAGE_URL_PARAM)
+    url = OAuthDataCookie.reconstruct_url(environ, True, "landing_page=true", [config.LANDING_PAGE_URL_PARAM])
     public_url = "https://{}{}".format(config.PUBLIC_HOST, path)
     site = template.render(link_url=url, public_url=public_url).encode("utf-8")
     status = "403 Forbidden"
@@ -219,7 +167,7 @@ def respond_error(http_error_message, start_response, exception_message, respons
     return [msg]
 
 
-def redirect(status, location, start_response):
+def redirect(status, location, start_response, oauth_cookie=False):
     """
     Return a redirect code. This function does not set any cookie.
 
@@ -232,41 +180,10 @@ def redirect(status, location, start_response):
         list: an empty list
     """
     response_headers = [("location", location)]
+    if oauth_cookie:
+        response_headers.append(("Set-Cookie", oauth_cookie.output()))
     start_response(status, response_headers)
     return []
-
-
-def request_oauth_token(environ, crypto_box):
-    """
-    Get a request_token from the OSM API and prepare the authroization URL the use should be redirected to.
-
-    Args:
-        crypto_box (nacl.public.Box): encryption used to encrypt oauth_token_secret
-
-    Returns:
-        str: authorization URL
-
-    Raises:
-        OAuthError: error sending a request to the OSM API or failed to parse its response
-    """
-    oauth = OAuth1Session(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
-
-    try:
-        fetch_response = oauth.fetch_request_token(config.REQUEST_TOKEN_URL)
-    except ValueError as err:
-        raise OAuthError(err.message, "500 Internal Server Error")
-    resource_owner_secret = fetch_response.get('oauth_token_secret')
-
-    # encrypt secret
-    nonce = nacl.utils.random(nacl.public.Box.NONCE_SIZE)
-    oauth_token_secret_encr = base64.urlsafe_b64encode(crypto_box.encrypt(resource_owner_secret.encode("utf8"), nonce)).decode("ascii")
-
-    authorization_url = oauth.authorization_url(config.AUTHORIZATION_URL)
-    # append callback URL because our callback URL is dynamic and cannot be configured in the consumer settings of osm.org
-    query_str_appendix = "oauth_token_secret_encr={}".format(urllib.parse.quote(oauth_token_secret_encr))
-    callback_url = urllib.parse.quote(reconstruct_url(environ, True, query_str_appendix, config.LANDING_PAGE_URL_PARAM))
-    authorization_url += "&oauth_callback={}".format(callback_url)
-    return authorization_url
 
 
 def application(environ, start_response):
@@ -289,7 +206,8 @@ def application(environ, start_response):
         try:
             oauth_cookie.get_access_token_from_api()
             if oauth_cookie.check_with_osm_api():
-                return grant_access(oauth_cookie, start_response, path_info)
+                url = urllib.parse.quote(oauth_cookie.query_params.get("path", ["/"])[0])
+                return redirect("302 Found (Moved Temporarily)", url, start_response, oauth_cookie)
         except OAuthError as err:
             return respond_error(err.error_message, start_response, str(err))
         return deny_access(oauth_cookie, start_response, "It was not possible to check if you are an OSM contributor. Did you revoke OAuth access for this application?")
@@ -305,5 +223,5 @@ def application(environ, start_response):
         return deny_access(oauth_cookie, start_response, "The authentication cookie is tampered or otherwise corrupted.")
     else:
         # first visit, authentication missing
-        authorization_url = request_oauth_token(environ, key_manager.boxes[config.KEY_NAME])
+        authorization_url = oauth_cookie.get_authorization_url()
         return redirect("302 Found (Moved Temporarily)", authorization_url, start_response)
