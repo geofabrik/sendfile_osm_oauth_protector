@@ -25,7 +25,7 @@ def respond_error(http_error_message, start_response, message):
 
 
 def get_request_token(environ, start_response):
-    oauth = OAuth1(config.CLIENT_KEY, client_secret=config.CLIENT_SECRET)
+    oauth = OAuth1(config.CLIENT_ID, client_secret=config.CLIENT_SECRET)
     try:
         r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth, timeout=15)
     except requests.exceptions.RequestException as err:

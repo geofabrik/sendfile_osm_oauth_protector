@@ -39,11 +39,11 @@ class OAuthDataCookie(DataCookie):
         self.valid_until = datetime.datetime.utcnow() - datetime.timedelta(hours=config.AUTH_TIMEOUT)
 
     def get_oauth_session(self, path=None, state=None):
-        redirect_uri = self.config.REDIRECT_URI
+        redirect_uri = self.config.CALLBACK
         if path:
             query_str_appendix = "path={}".format(urllib.parse.quote(path))
             redirect_uri = "{}?{}".format(redirect_uri, query_str_appendix)
-        return OAuth2Session(self.config.CLIENT_KEY, redirect_uri=redirect_uri, scope=["read_prefs"], state=state)
+        return OAuth2Session(self.config.CLIENT_ID, redirect_uri=redirect_uri, scope=["read_prefs"], state=state)
 
     def reconstruct_url(environ, with_query_string=False, append_to_query_string=None, skip_keys=[]):
         """

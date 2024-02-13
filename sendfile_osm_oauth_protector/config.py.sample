@@ -21,13 +21,14 @@ class Config:
         LANDING_PAGE_URL_PARAM (str): URL parameter to indicate that the user comes from the landing page
         PUBLIC_HOST (str): hostname of the public alternative which offers the same but without sensitive data
         HOSTNAME (str): hostname of this service
-        CLIENT_KEY: your (application developer) OAuth client key
+        CLIENT_ID: your (application developer) OAuth client ID
         CLIENT_SECRET: your (application developer) OAuth client secret
         REQUEST_TOKEN_URL: URL to request a temporary token
         AUTHORIZATION_URL: URL the user should be redirected to in order to authorize your application the
                            necessary permissions
         ACCESS_TOKEN_URL: URL to request an access token
         API_URL_BASE: URL base of the OSM API to be used
+        CALLBACK: location the client should be redirected to after they have authorized access on osm.org
         KEY_DIR: path to a directory where the keys are stored
         KEY_NAME: default key to use (prefix of the file name)
 
@@ -57,12 +58,12 @@ class Config:
         self.PUBLIC_HOST = "download.geofabrik.de"
         self.HOSTNAME = "osm-internal.download.geofabrik.de"
 
-        self.REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
-        self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"
-        self.ACCESS_TOKEN_URL = "https://www.openstreetmap.org/oauth/access_token"
+        self.AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth2/authorize"
+        self.TOKEN_URL = "https://www.openstreetmap.org/oauth2/token"
         self.API_URL_BASE = "https://api.openstreetmap.org/api/0.6/"
+        self.CALLBACK = "https://ortelius.geofabrik.de/oauth2_callback"
 
-        self.CLIENT_KEY = "STUVekasdfghjklqwertzuioyxcvbnm654gh"
+        self.CLIENT_ID = "STUVekasdfghjklqwertzuioyxcvbnm654gh"
         self.CLIENT_SECRET = "A7650123456789lokimjunhzbgtvfrcdexyX8USHPX"
 
         self.KEY_DIR = "/srv/osm-internal-auth/keys/"
