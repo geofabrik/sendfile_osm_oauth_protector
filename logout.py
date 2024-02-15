@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-import http.cookies
-
 from sendfile_osm_oauth_protector.config import Config
 from sendfile_osm_oauth_protector.data_cookie import DataCookie
 
