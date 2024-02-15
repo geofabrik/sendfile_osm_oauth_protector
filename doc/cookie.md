@@ -24,12 +24,13 @@ If you decrypt the encrypted message, you will get another string consisting of 
 
 
 ```
-<access token>|<access token secret>|<valid until>
+<access token>|oauth2|<valid until>
 ```
 
-*access token* is the OAuth access token used to request a protected resource from the OSM API.
+*access token* is the OAuth 2 access token used to request a protected resource from the OSM API.
+An usal OAuth 2 implementation would store this token on the server in some kind of session management database. However, we don't run any session managment and implement the OAuth authorization procedure as stateless as possible. That's why we use the client's cookie to store everything which has to be stored.
 
-*access token secret* is the OAuth access token secret used to request a protected resource from the OSM API. A usal OAuth implementation would store this secret on the server in some kind of session management database. However, we don't run any session managment and implement the OAuth authentication and authorization procedure as stateless as possible. That's why we use the client's cookie to store everything which has to be stored.
+`oauth2` is a hardcoded keyword. When we used OAuth1, this part was used for the "access token secret". However, that does not exist in OAuth2. In order to avoid changing the cookie syntax, we just replaced it by a hard-coded string.
 
 *valid_until* is the date when the authorization will be checked by requesting a protected resource from the OSM API. The date uses following format: `%Y-%m-%d:%H:%M:%S`
 

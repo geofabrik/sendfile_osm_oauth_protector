@@ -4,6 +4,12 @@ This tool is designed as an drop-in replacement for websites whose content is
 served as static files (not generated dynamically by a PHP, Node.JS, Python or whatever software)
 by Apache and which should only be accessible to OpenStreetMap contributors.
 
+The OpenStreetMap contributor is asked to authorize read access to the user's
+OpenStreetMap settings.  Sendfile-osm-oauth-protector will use the granted
+access to verify that an OpenStreetMap contributor.  If the verification
+succeeds, the contributor gets a cookie. The cookie contains the encrypted and
+signed access token granted to Sendfile-osm-oauth-protector.
+
 This repository also contains a client program written in Python to retrieve
 automate the authentication and OAuth authorization process to make it possible
 to access the protected ressources without human interaction.
