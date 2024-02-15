@@ -189,7 +189,8 @@ class OAuthDataCookie(DataCookie):
         try:
             parts = self.read_crypto_box.decrypt(access_tokens_encr).decode("ascii").split("|")
             self.access_token = parts[0]
-            #self.access_token_secret = parts[1]
+            if parts[1] != "oauth2":
+                raise OAuthError("OAuth1 based cookies are not supported any more. Please re-authorize access.", "403 Forbidden") from err
             self.valid_until = datetime.datetime.strptime(parts[2], "%Y-%m-%dT%H:%M:%S")
         except Exception as err:
             raise OAuthError("decryption of tokens failed", "400 Bad Request") from err
@@ -207,7 +208,6 @@ class OAuthDataCookie(DataCookie):
         ITERATION2_KEYS = {"code", "state", "path"}
         is_redirected_from_osm = False
         if (ITERATION2_KEYS & set(iter(self.query_params))) == set(ITERATION2_KEYS):
-            #return AuthenticationState.LOGGED_IN
             is_redirected_from_osm = self.called_callback_path()
         landing_page = self.query_params.get(self.config.LANDING_PAGE_URL_PARAM, ["false"])
         if self.cookie is None and landing_page[0] == "true":
