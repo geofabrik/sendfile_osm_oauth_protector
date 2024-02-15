@@ -41,7 +41,7 @@ def application(environ, start_response):
     if "HTTP_COOKIE" not in environ:
         return respond_error("400 Bad Request", start_response, "no_cookie_provided", "No cookie provided.")
     try:
-        oauth_cookie = OAuthDataCookie(config, environ, key_manager)
+        oauth_cookie = OAuthDataCookie(config, environ, True, key_manager)
     except OAuthError:
         return respond_error("400 Bad Request", start_response, "cookie_verification_failed", "Cookie verification failed. Your cookie was signed using a key which is not available on the server.")
 
