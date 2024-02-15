@@ -17,6 +17,7 @@ sudo a2enmod xsendfile
 ```
 
 * Clone this repository to `/srv/osm-internal-auth/`
+* Copy the sample configuration from `/srv/osm-internal-auth/sendfile_osm_oauth_protector/config.py.sample` to `/srv/osm-internal-auth/sendfile_osm_oauth_protector/config.py`
 
 
 ## Configuration
@@ -78,6 +79,9 @@ WSGIPythonPath /srv/osm-internal-auth/
     <Location /cookie_status>
         WSGIProcessGroup with_nacl
     </Location>
+    <Location /oauth2_callback>
+        WSGIProcessGroup with_nacl
+    </Location>
     <Location />
         WSGIProcessGroup with_nacl
     </Location>
@@ -109,7 +113,19 @@ WSGIPythonPath /srv/osm-internal-auth/
 </VirtualHost>
 ```
 
-* Restart Apache using `sudo systemctl restart apache2`
+## Register as OAuth2 client
+
+Register yourself as an OAuth2 client at [https://www.openstreetmap.org/oauth2/applications/new](https://www.openstreetmap.org/oauth2/applications/new).
+The form will ask you for the following informations:
+
+* Name: choose one yourself. Mind that it will be shown to the user.
+* Redirect URIs: enter the following two URIs: `https://YOUR_HOSTNAME/oauth2_callback` and `https://YOUR_HOSTNAME/get_cookie`
+* Confidential application: yes
+* Permissions: check "read user settings"
+
+The form will return a client ID and a client secret. Save them in the configuration at `/srv/osm-internal-auth/sendfile_osm_oauth_protector/config.py`.
+
+Restart Apache using `sudo systemctl restart apache2`
 
 
 ## Common pitfalls
