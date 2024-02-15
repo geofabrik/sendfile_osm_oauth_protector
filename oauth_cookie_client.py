@@ -31,6 +31,7 @@ def find_authenticity_token(response):
 
 
 parser = argparse.ArgumentParser(description="Get a cookie to access service protected by OpenStreetMap OAuth 1.0a and osm-internal-oauth")
+parser.add_argument("--insecure", action="store_false", help="Do not check SSL certificates. This is useful for development setups only.")
 parser.add_argument("-o", "--output", default=None, help="write the cookie to the specified file instead to STDOUT", type=argparse.FileType("w+"))
 parser.add_argument("-u", "--user", default=None, help="user name", type=str)
 parser.add_argument("-p", "--password", default=None, help="Password, leave empty to force input from STDIN.", type=str)
@@ -63,7 +64,7 @@ if consumer_url is None:
 
 # get request token
 url = consumer_url + "?action=get_authorization_url"
-r = requests.post(url, data={}, headers=CUSTOM_HEADER, verify=False)
+r = requests.post(url, data={}, headers=CUSTOM_HEADER, verify=args.insecure)
 if r.status_code != 200:
     report_error("POST {}, received HTTP status code {} but expected 200".format(url, r.status_code))
 json_response = json.loads(r.text)
@@ -94,7 +95,7 @@ if r.status_code != 302:
     report_error("POST {}, received HTTP code {} but expected 302".format(login_url, r.status_code))
 
 # authorize
-r = s.get(authorization_url, headers=CUSTOM_HEADER)
+r = s.get(authorization_url, headers=CUSTOM_HEADER, verify=args.insecure)
 if r.status_code != 200:
     report_error("GET {}, received HTTP code {} but expected 200".format(authorization_url, r.status_code))
 authenticity_token = find_authenticity_token(r.text)
@@ -119,7 +120,7 @@ if r.status_code != 200 and r.status_code != 302:
 
 # get final cookie
 url = "{}&{}".format(location, urllib.parse.urlencode({"format": args.format}))
-r = requests.get(url, headers=CUSTOM_HEADER, verify=False)
+r = requests.get(url, headers=CUSTOM_HEADER, verify=args.insecure)
 
 cookie_text = r.text
 if not cookie_text.endswith("\n"):
