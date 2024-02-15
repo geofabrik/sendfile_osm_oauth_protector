@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import re
 import requests
 import sys
@@ -11,7 +12,7 @@ from getpass import getpass
 CUSTOM_HEADER = {"user-agent": "oauth_cookie_client.py"}
 
 def report_error(message):
-    sys.stderr.write("{}\n".format(message))
+    logging.critical("{}".format(message))
     exit(1)
 
 
@@ -26,12 +27,12 @@ def find_authenticity_token(response):
     try:
         return m.group(1)
     except IndexError:
-        sys.stderr.write("ERROR: The login form does not contain an authenticity_token.\n")
-        exit(1)
+        report_error("ERROR: The login form does not contain an authenticity_token.")
 
 
 parser = argparse.ArgumentParser(description="Get a cookie to access service protected by OpenStreetMap OAuth 1.0a and osm-internal-oauth")
 parser.add_argument("--insecure", action="store_false", help="Do not check SSL certificates. This is useful for development setups only.")
+parser.add_argument("-l", "--log-level", help="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", default="INFO", type=str)
 parser.add_argument("-o", "--output", default=None, help="write the cookie to the specified file instead to STDOUT", type=argparse.FileType("w+"))
 parser.add_argument("-u", "--user", default=None, help="user name", type=str)
 parser.add_argument("-p", "--password", default=None, help="Password, leave empty to force input from STDIN.", type=str)
@@ -40,11 +41,17 @@ parser.add_argument("-c", "--consumer-url", default=None, help="URL of the OAuth
 parser.add_argument("-f", "--format", default="http", help="Output format: 'http' for the value of the HTTP 'Cookie' header or 'netscape' for a Netscape-like cookie jar file", type=str, choices=["http", "netscape"])
 parser.add_argument("--osm-host", default="https://www.openstreetmap.org/", help="hostname of the OSM API/website to use (e.g. 'www.openstreetmap.org' or 'master.apis.dev.openstreetmap.org')", type=str)
 
-
 args = parser.parse_args()
 settings = {}
 if args.settings is not None:
     settings = json.load(args.settings)
+
+# log level
+numeric_log_level = getattr(logging, args.log_level.upper())
+if not isinstance(numeric_log_level, int):
+    raise ValueError("Invalid log level {}".format(args.log_level.upper()))
+logging.basicConfig(level=numeric_log_level)
+
 
 username = settings.get("user", args.user)
 if username is None:
@@ -93,17 +100,22 @@ login_url = osm_host + "/login"
 r = s.post(login_url, data={"username": username, "password": password, "referer": "/", "commit": "Login", "authenticity_token": authenticity_token}, allow_redirects=False, headers=CUSTOM_HEADER)
 if r.status_code != 302:
     report_error("POST {}, received HTTP code {} but expected 302".format(login_url, r.status_code))
+logging.debug("{} -> {}".format(r.request.url, r.headers["location"]))
 
 # authorize
-r = s.get(authorization_url, headers=CUSTOM_HEADER, verify=args.insecure)
-if r.status_code != 200:
-    report_error("GET {}, received HTTP code {} but expected 200".format(authorization_url, r.status_code))
-authenticity_token = find_authenticity_token(r.text)
-
-post_data = {"client_id": client_id, "redirect_uri": redirect_uri, "authenticity_token": authenticity_token, "state": state, "response_type": "code", "scope": "read_prefs", "nonce": "", "code_challenge": "", "code_challenge_method": "", "commit": "Authorize"}
-r = s.post(authorization_url, data=post_data, headers=CUSTOM_HEADER, allow_redirects=False)
+r = s.get(authorization_url, headers=CUSTOM_HEADER, allow_redirects=False)
 if r.status_code != 302:
-    report_error("POST {}, received HTTP code {} but expected 302".format(authorization_url, r.status_code))
+    # If authorization has been granted to the OAuth client yet, we will receive status 302. If not, status 200 should be returned and the form needs to be submitted.
+    if r.status_code != 200:
+        report_error("GET {}, received HTTP code {} but expected 200".format(authorization_url, r.status_code))
+    authenticity_token = find_authenticity_token(r.text)
+
+    post_data = {"client_id": client_id, "redirect_uri": redirect_uri, "authenticity_token": authenticity_token, "state": state, "response_type": "code", "scope": "read_prefs", "nonce": "", "code_challenge": "", "code_challenge_method": "", "commit": "Authorize"}
+    r = s.post(authorization_url, data=post_data, headers=CUSTOM_HEADER, allow_redirects=False)
+    if r.status_code != 302:
+        report_error("POST {}, received HTTP code {} but expected 302".format(authorization_url, r.status_code))
+else:
+    logging.debug("{} -> {}".format(r.request.url, r.headers["location"]))
 location = None
 try:
     location = r.headers["location"]
