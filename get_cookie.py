@@ -1,11 +1,7 @@
 #! /usr/bin/env python3
 
 import urllib.parse
-import base64
 import json
-import nacl.utils
-import requests
-from requests_oauthlib import OAuth1
 
 from sendfile_osm_oauth_protector.config import Config
 from sendfile_osm_oauth_protector.key_manager import KeyManager
@@ -24,22 +20,18 @@ def respond_error(http_error_message, start_response, message):
     return [msg]
 
 
-def get_request_token(environ, start_response):
-    oauth = OAuth1(config.CLIENT_ID, client_secret=config.CLIENT_SECRET)
-    try:
-        r = requests.post(url=config.REQUEST_TOKEN_URL, auth=oauth, timeout=15)
-    except requests.exceptions.RequestException as err:
-        respond_error("502 Bad Gateway", start_response, str(err))
-    parts = urllib.parse.parse_qs(r.text)
+def get_authorization_url(environ, start_response):
+    oauth_cookie = OAuthDataCookie(config, environ, True)
+    oauth = oauth_cookie.get_oauth_session()
+    redirect_uri = oauth.redirect_uri
+    authorization_url, state = oauth.authorization_url(config.AUTHORIZATION_URL)
 
-    crypto_box = key_manager.boxes[config.KEY_NAME]
-    token_secret = parts["oauth_token_secret"][0]
-    nonce = nacl.utils.random(nacl.public.Box.NONCE_SIZE)
-    token_secret_encr = base64.b64encode(crypto_box.encrypt(token_secret.encode("utf8"), nonce)).decode("ascii")
-
-    result = {"oauth_token": parts["oauth_token"][0],
-              "oauth_token_secret_encr": token_secret_encr,
-              "authorization_url": config.AUTHORIZATION_URL}
+    result = {
+        "authorization_url": authorization_url,
+        "state": state,
+        "client_id": config.CLIENT_ID,
+        "redirect_uri": redirect_uri,
+    }
     result_enc = json.dumps(result).encode("utf-8")
     response_headers = [("Content-type", "application/json, charset=utf-8"),
                         ("Content-Length", str(len(result_enc)))]
@@ -47,20 +39,15 @@ def get_request_token(environ, start_response):
     return [result_enc]
 
 
-def get_access_token(environ, start_response, output_format):
-    # parse POST data
-    try:
-        request_body_size = int(environ.get("CONTENT_LENGTH", 0))
-    except ValueError:
-        request_body_size = 0
-    if request_body_size <= 0:
-        return respond_error("400 Bad Request", start_response, "Missing or unreadable 'Content-Length' header")
-    request_body = environ["wsgi.input"].read(request_body_size).decode()
+def get_access_token(params, environ, start_response):
+    # parse query string data
+    if len(params) == 0:
+        return respond_error("400 Bad Request", start_response, "Query string is missing.")
+    output_format = params.get("format", ["http"])[0]
     if output_format not in ["http", "netscape"]:
         return respond_error("400 Bad Request", start_response, "Unsupported output format. Valid vaulues: http, netscape")
 
-    new_environ = {"QUERY_STRING": request_body}
-    oauth_data_cookie = OAuthDataCookie(config, new_environ, key_manager)
+    oauth_data_cookie = OAuthDataCookie(config, environ, True, key_manager)
     try:
         oauth_data_cookie.get_access_token_from_api()
         if not oauth_data_cookie.check_with_osm_api():
@@ -76,15 +63,12 @@ def get_access_token(environ, start_response, output_format):
 
 
 def application(environ, start_response):
-    if environ["REQUEST_METHOD"] != "POST":
-        return respond_error("400 Bad Request", start_response, "Only POST requests are permitted")
     params = urllib.parse.parse_qs(environ["QUERY_STRING"])
     action = params.get("action", None)
-    output_format = params.get("format", ["http"])[0]
     if action is None:
         return respond_error("400 Bad Request", start_response, "Parameter 'action' is missing")
-    if action[0] == "request_token":
-        return get_request_token(environ, start_response)
-    elif action[0] == "get_access_token_cookie":
-        return get_access_token(environ, start_response, output_format)
-    return respond_error("400 Bad Request", start_response, "The requested 'action' is not supported.")
+    if environ["REQUEST_METHOD"] == "POST" and action[0] == "get_authorization_url":
+        return get_authorization_url(environ, start_response)
+    elif environ["REQUEST_METHOD"] == "GET" and action[0] == "get_access_token_cookie":
+        return get_access_token(params, environ, start_response)
+    return respond_error("400 Bad Request", start_response, "The requested 'action' and/or HTTP method is not supported.")

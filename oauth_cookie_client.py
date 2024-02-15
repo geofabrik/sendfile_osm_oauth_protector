@@ -5,6 +5,7 @@ import json
 import re
 import requests
 import sys
+import urllib.parse
 from getpass import getpass
 
 CUSTOM_HEADER = {"user-agent": "oauth_cookie_client.py"}
@@ -61,15 +62,20 @@ if consumer_url is None:
     report_error("No consumer URL provided")
 
 # get request token
-url = consumer_url + "?action=request_token"
-r = requests.post(url, data={}, headers=CUSTOM_HEADER)
+url = consumer_url + "?action=get_authorization_url"
+r = requests.post(url, data={}, headers=CUSTOM_HEADER, verify=False)
 if r.status_code != 200:
     report_error("POST {}, received HTTP status code {} but expected 200".format(url, r.status_code))
 json_response = json.loads(r.text)
-authorize_url = osm_host + "/oauth/authorize"
+authorization_url = None
+state = None
+redirect_uri = None
+client_id = None
 try:
-    oauth_token = json_response["oauth_token"]
-    oauth_token_secret_encr = json_response["oauth_token_secret_encr"]
+    authorization_url = json_response["authorization_url"]
+    state = json_response["state"]
+    redirect_uri = json_response["redirect_uri"]
+    client_id = json_response["client_id"]
 except KeyError:
     report_error("oauth_token was not found in the first response by the consumer")
 
@@ -88,27 +94,32 @@ if r.status_code != 302:
     report_error("POST {}, received HTTP code {} but expected 302".format(login_url, r.status_code))
 
 # authorize
-authorize_url = "{}/oauth/authorize?oauth_token={}".format(osm_host, oauth_token)
-r = s.get(authorize_url, headers=CUSTOM_HEADER)
+r = s.get(authorization_url, headers=CUSTOM_HEADER)
 if r.status_code != 200:
-    report_error("GET {}, received HTTP code {} but expected 200".format(authorize_url, r.status_code))
+    report_error("GET {}, received HTTP code {} but expected 200".format(authorization_url, r.status_code))
 authenticity_token = find_authenticity_token(r.text)
 
-post_data = {"oauth_token": oauth_token, "oauth_callback": "", "authenticity_token": authenticity_token, "allow_read_prefs": [0, 1], "commit": "Save changes"}
-authorize_url = "{}/oauth/authorize".format(osm_host)
-r = s.post(authorize_url, data=post_data, headers=CUSTOM_HEADER)
-if r.status_code != 200:
-    report_error("POST {}, received HTTP code {} but expected 200".format(authorize_url, r.status_code))
+post_data = {"client_id": client_id, "redirect_uri": redirect_uri, "authenticity_token": authenticity_token, "state": state, "response_type": "code", "scope": "read_prefs", "nonce": "", "code_challenge": "", "code_challenge_method": "", "commit": "Authorize"}
+r = s.post(authorization_url, data=post_data, headers=CUSTOM_HEADER, allow_redirects=False)
+if r.status_code != 302:
+    report_error("POST {}, received HTTP code {} but expected 302".format(authorization_url, r.status_code))
+location = None
+try:
+    location = r.headers["location"]
+except KeyError:
+    report_error("Response headers of authorization request did not contain a location header.")
+if "?" not in location:
+    report_error("Redirect URL after authorization misses query string.")
 
 # logout
 logout_url = "{}/logout".format(osm_host)
 r = s.get(logout_url, headers=CUSTOM_HEADER)
 if r.status_code != 200 and r.status_code != 302:
-    report_error("POST {}, received HTTP code {} but expected 200 or 302".format(logout_url))
+    report_error("POST {}, received HTTP code {} but expected 200 or 302".format(logout_url, r.status_code))
 
 # get final cookie
-url = consumer_url + "?action=get_access_token_cookie&format={}".format(args.format)
-r = requests.post(url, data={"oauth_token": oauth_token, "oauth_token_secret_encr": oauth_token_secret_encr}, headers=CUSTOM_HEADER)
+url = "{}&{}".format(location, urllib.parse.urlencode({"format": args.format}))
+r = requests.get(url, headers=CUSTOM_HEADER, verify=False)
 
 cookie_text = r.text
 if not cookie_text.endswith("\n"):

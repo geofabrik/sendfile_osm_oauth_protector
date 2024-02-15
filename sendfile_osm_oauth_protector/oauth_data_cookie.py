@@ -13,7 +13,7 @@ from sendfile_osm_oauth_protector.internal_error import InternalError
 
 
 class OAuthDataCookie(DataCookie):
-    def __init__(self, config, environ, key_manager=None):
+    def __init__(self, config, environ, cookie_api=False, key_manager=None):
         """
         Args:
             config (Config): configuration
@@ -24,6 +24,7 @@ class OAuthDataCookie(DataCookie):
         self.read_cookie(environ)
         self.query_params = urllib.parse.parse_qs(environ["QUERY_STRING"])
         self.environ = environ
+        self.cookie_api = cookie_api
         self.path_info = environ["PATH_INFO"]
         self.script_name = environ["SCRIPT_NAME"]
         self.key_manager = key_manager
@@ -40,6 +41,8 @@ class OAuthDataCookie(DataCookie):
 
     def get_oauth_session(self, path=None, state=None):
         redirect_uri = self.config.CALLBACK
+        if self.cookie_api:
+            redirect_uri = "{}?action=get_access_token_cookie".format(self.config.COOKIE_API)
         if path:
             query_str_appendix = "path={}".format(urllib.parse.quote(path))
             redirect_uri = "{}?{}".format(redirect_uri, query_str_appendix)
@@ -127,9 +130,11 @@ class OAuthDataCookie(DataCookie):
         """
         try:
             state = self.query_params["state"][0]
-            path = self.query_params["path"][0]
+            path = None
+            if not self.cookie_api:
+                path = self.query_params["path"][0]
         except KeyError as err:
-            raise OAuthError("code, state or path is missing.", "400 Bad Request") from err
+            raise OAuthError("state or path is missing.", "400 Bad Request") from err
         token = None
         try:
             oauth = self.get_oauth_session(path, state)

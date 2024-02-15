@@ -196,7 +196,7 @@ def application(environ, start_response):
     # The old key is determined using a property of the cookie sent by the user.
 
     try:
-        oauth_cookie = OAuthDataCookie(config, environ, key_manager)
+        oauth_cookie = OAuthDataCookie(config, environ, False, key_manager)
     except InternalError:
         return respond_error("400 Bad Request", start_response, "Cookie verification failed. Your cookie was signed using a key which is not available on the server.")
     auth_state = oauth_cookie.get_state()
