@@ -20,7 +20,7 @@ to access the protected ressources without human interaction.
 
 The client requires Python 3 and the Requets library.
 
-Debian/Ubunut: `apt install python3 python3-requets`
+Debian/Ubuntu: `apt install python3 python3-requets`
 
 Pip: `pip install requests`
 
