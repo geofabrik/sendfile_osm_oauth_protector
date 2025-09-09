@@ -54,7 +54,7 @@ def index_listing(path_on_disk, path, start_response):
     files = os.listdir(path_on_disk)
     files = [ f for f in files if not f.startswith('.') ]
     is_dir = [ os.path.isdir(os.path.join(path_on_disk, f)) for f in files ]
-    site = template.render(files=files, is_dir=is_dir, path=path).encode("utf-8")
+    site = template.render(files=sorted(files), is_dir=is_dir, path=path).encode("utf-8")
     status = "200 OK"
     response_headers = [("Content-type", "text/html"),
                         ("Content-length", str(len(site)))]
