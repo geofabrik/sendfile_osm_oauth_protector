@@ -56,8 +56,7 @@ include in your command line invokation:
   cookie expired, you have to re-run this program to retrieve a new one and try
   your request again.
 
-If you use *wget* to download files, add `--load-cookies /path/to/cookie_file
---max-redirect 0` to your invokation of wget.
+If you use *wget* to download files, add `--load-cookies /path/to/cookie_file` to your invokation of wget.
 
 If you use *curl* to download files, add `--cookie $(cat /path/to/cookie_file)`
 to your invokation of wget.
