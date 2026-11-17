@@ -136,3 +136,10 @@ There are two common reasons:
 
 * You are running mod_wsgi with Python2 but have the Python3 version of the packages installed.
 * You haven't set or have set the wrong Python search path. If you installed this repository to `/foo/bar/oauth-tool/`, the `python-path` property of `WSGIDaemonProcess` should be set to `/foo/bar/oauth-tool/`
+
+**The requested redirect uri is malformed or doesn't match client redirect URI.**
+
+When the `/oauth2/authorize` endpoint of the OpenStreetMap API returns HTTP status 400 and this error message, the redirect URI provided in the query string and the redirect URI stored in the application settings at openstreetmap.org do not match. Check if the following settings in `sendfile_osm_oauth_protector/config.py` match the entries at [https://master.apis.dev.openstreetmap.org/oauth2/applications](https://master.apis.dev.openstreetmap.org/oauth2/applications):
+
+* `self.CALLBACK`
+* `self.COOKIE_API`
